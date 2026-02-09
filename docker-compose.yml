@@ -1,0 +1,50 @@
+services:
+  db:
+    image: postgres:16
+    container_name: ogvoice-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ogvoice
+    ports:
+      - "5432:5432"
+    volumes:
+      - ogvoice_pgdata:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio:latest
+    container_name: ogvoice-minio
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio12345
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ogvoice_minio:/data
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: ogvoice-minio-init
+    depends_on:
+      - minio
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e;
+        for i in $(seq 1 30); do
+          mc alias set local http://minio:9000 minio minio12345 && break;
+          echo "Waiting for MinIO...";
+          sleep 1;
+        done;
+        mc mb -p local/ogvoice || true;
+        mc anonymous set none local/ogvoice || true;
+        echo "MinIO bucket ensured: ogvoice";
+    restart: "no"
+
+volumes:
+  ogvoice_pgdata:
+  ogvoice_minio:
