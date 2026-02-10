@@ -38,16 +38,27 @@ export async function POST(req: Request) {
 
     return ok({ user });
   } catch (e) {
+    const errorId = crypto.randomUUID();
+    console.error("[auth.register] failed", { errorId, error: e });
     const msg = e instanceof Error ? e.message : "Unknown error";
     // Friendly error for vibecoders: DB not started.
-    if (msg.includes("Can't reach database server") || msg.includes("PrismaClientInitializationError")) {
+    const name =
+      e && typeof e === "object" && "name" in e
+        ? String((e as { name?: unknown }).name)
+        : "";
+    if (
+      msg.includes("Can't reach database server") ||
+      msg.includes("PrismaClientInitializationError") ||
+      msg.includes("prisma generate") ||
+      name.includes("PrismaClientInitializationError")
+    ) {
       return err(
         "DB_UNAVAILABLE",
         "Database is not running yet. Start Postgres (pnpm db:up) and then run pnpm prisma:migrate.",
         503
-      );
+      , { errorId });
     }
-    return err("INTERNAL", "Registration failed due to a server error.", 500);
+    return err("INTERNAL", "Registration failed due to a server error.", 500, { errorId });
   }
 }
 

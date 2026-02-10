@@ -2,11 +2,9 @@
 
 const { execSync } = require("node:child_process");
 
-if (!process.env.DATABASE_URL) {
-  console.log("[postinstall] Skipping prisma generate (DATABASE_URL not set)");
-  process.exit(0);
-}
-
+// `prisma generate` does not require a database connection.
+// Always generate on install so production builds (e.g. Vercel) don't depend
+// on DATABASE_URL being present during install.
 try {
   execSync("prisma generate", { stdio: "inherit" });
 } catch {
