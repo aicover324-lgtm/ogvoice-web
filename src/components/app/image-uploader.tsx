@@ -9,6 +9,10 @@ import { Progress } from "@/components/ui/progress";
 type UploadType = "avatar_image" | "voice_cover_image";
 type PreviewVariant = "avatar" | "cover";
 
+export type ImageUploaderHandle = {
+  openPicker: () => void;
+};
+
 type PreviewConfig = {
   src: string;
   alt: string;
@@ -16,19 +20,28 @@ type PreviewConfig = {
   size?: number;
 };
 
-export function ImageUploader({
-  type,
-  voiceProfileId,
-  onComplete,
-  buttonLabel,
-  preview,
-}: {
+export const ImageUploader = React.forwardRef<ImageUploaderHandle, {
   type: UploadType;
   voiceProfileId?: string;
   onComplete?: () => void;
+  onAssetCreated?: (asset: { id: string }) => void;
   buttonLabel?: string;
   preview?: PreviewConfig;
-}) {
+  trigger?: "button" | "frame";
+  headless?: boolean;
+}>(function ImageUploader(
+  {
+    type,
+    voiceProfileId,
+    onComplete,
+    onAssetCreated,
+    buttonLabel,
+    preview,
+    trigger,
+    headless,
+  },
+  ref
+) {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
@@ -40,6 +53,19 @@ export function ImageUploader({
     setPreviewKey(Date.now());
     setPreviewOk(true);
   }, []);
+
+  const openPicker = React.useCallback(() => {
+    if (busy) return;
+    inputRef.current?.click();
+  }, [busy]);
+
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      openPicker,
+    }),
+    [openPicker]
+  );
 
   async function upload(file: File) {
     setBusy(true);
@@ -104,10 +130,13 @@ export function ImageUploader({
         throw new Error(confirmJson?.error?.message || "Failed to confirm upload");
       }
 
+       const created = (confirmJson.data?.asset || null) as { id?: string } | null;
+
       setProgress(100);
       toast.success(type === "avatar_image" ? "Avatar updated" : "Cover updated");
       setPreviewKey(Date.now());
       setPreviewOk(true);
+      if (created?.id) onAssetCreated?.({ id: String(created.id) });
       onComplete?.();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed");
@@ -125,16 +154,40 @@ export function ImageUploader({
   }, [preview?.src, previewKey]);
 
   const previewSize = preview?.size ?? (preview?.variant === "avatar" ? 56 : 176);
+  const effectiveTrigger: "button" | "frame" = trigger ?? "button";
+
+  if (headless) {
+    return (
+      <>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          disabled={busy}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (!f) return;
+            void upload(f);
+          }}
+        />
+      </>
+    );
+  }
 
   return (
     <div className="grid gap-2">
       {preview ? (
-        <div className="flex items-center gap-3">
-          <div
+        <div className={effectiveTrigger === "frame" ? "grid gap-2" : "flex items-center gap-3"}>
+          <button
+            type="button"
+            onClick={effectiveTrigger === "frame" ? openPicker : undefined}
+            disabled={busy || effectiveTrigger !== "frame"}
+            aria-label={type === "avatar_image" ? "Upload avatar" : "Upload cover"}
             className={
               preview.variant === "avatar"
-                ? "grid place-items-center overflow-hidden rounded-full border bg-muted"
-                : "grid place-items-center overflow-hidden rounded-xl border bg-muted"
+                ? "group relative grid place-items-center overflow-hidden rounded-full border bg-muted"
+                : "group relative grid place-items-center overflow-hidden rounded-xl border bg-muted"
             }
             style={{ width: previewSize, height: previewSize }}
           >
@@ -145,21 +198,49 @@ export function ImageUploader({
               <img
                 src={previewSrc}
                 alt={preview.alt}
-                className="h-full w-full object-cover"
+                className={busy ? "h-full w-full object-cover opacity-60" : "h-full w-full object-cover"}
                 onError={() => setPreviewOk(false)}
               />
             ) : (
-              <div className="px-3 text-center text-xs text-muted-foreground">
-                {preview.variant === "avatar" ? "No avatar" : "No cover"}
+              <div className="grid place-items-center px-3 text-center">
+                {effectiveTrigger === "frame" ? (
+                  <div className="grid place-items-center gap-2">
+                    <UploadCloud className="h-5 w-5 text-muted-foreground" />
+                    <div className="text-xs text-muted-foreground">Click to upload</div>
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground">
+                    {preview.variant === "avatar" ? "No avatar" : "No cover"}
+                  </div>
+                )}
               </div>
             )}
-          </div>
-          <div className="min-w-0">
-            <div className="text-sm font-medium">
-              {type === "avatar_image" ? "Current avatar" : "Current cover"}
+
+            {effectiveTrigger === "frame" && !busy ? (
+              <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/0 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="rounded-full bg-black/55 px-3 py-1.5 text-xs font-medium text-white">
+                  {previewSrc && previewOk ? "Change" : "Upload"}
+                </div>
+              </div>
+            ) : null}
+
+            {busy ? (
+              <div className="pointer-events-none absolute inset-0 grid place-items-center">
+                <div className="h-10 w-10 rounded-full border-2 border-white/25 border-t-white animate-spin" />
+              </div>
+            ) : null}
+          </button>
+
+          {effectiveTrigger === "frame" ? (
+            <div className="text-xs text-muted-foreground">Click the square to upload. Replaces previous image.</div>
+          ) : (
+            <div className="min-w-0">
+              <div className="text-sm font-medium">
+                {type === "avatar_image" ? "Current avatar" : "Current cover"}
+              </div>
+              <div className="mt-0.5 text-xs text-muted-foreground">Replaces previous image automatically.</div>
             </div>
-            <div className="mt-0.5 text-xs text-muted-foreground">Replaces previous image automatically.</div>
-          </div>
+          )}
         </div>
       ) : null}
       <input
@@ -174,12 +255,14 @@ export function ImageUploader({
           void upload(f);
         }}
       />
-      <Button type="button" variant="outline" className="rounded-full" disabled={busy} onClick={() => inputRef.current?.click()}>
-        <UploadCloud className="mr-2 h-4 w-4" />
-        {busy ? "Uploading..." : buttonLabel || (type === "avatar_image" ? "Upload avatar" : "Upload cover")}
-      </Button>
+      {effectiveTrigger === "button" ? (
+        <Button type="button" variant="outline" className="rounded-full" disabled={busy} onClick={openPicker}>
+          <UploadCloud className="mr-2 h-4 w-4" />
+          {busy ? "Uploading..." : buttonLabel || (type === "avatar_image" ? "Upload avatar" : "Upload cover")}
+        </Button>
+      ) : null}
       {progress > 0 ? <Progress value={progress} /> : null}
       <div className="text-xs text-muted-foreground">Optimized and stored as WEBP.</div>
     </div>
   );
-}
+});

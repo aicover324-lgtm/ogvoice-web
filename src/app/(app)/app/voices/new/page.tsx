@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DraftDatasetUploaderWithReplace } from "@/components/app/draft-dataset-uploader-with-replace";
+import { ImageUploader } from "@/components/app/image-uploader";
+import { Badge } from "@/components/ui/badge";
 
 const schema = z.object({
   name: z.string().min(2).max(60),
@@ -21,6 +23,18 @@ export default function NewVoicePage() {
   const router = useRouter();
   const [creating, setCreating] = React.useState(false);
   const [datasetAssetId, setDatasetAssetId] = React.useState<string | null>(null);
+  const [coverAssetId, setCoverAssetId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    // If user refreshes the page, we can still attach the last drafted cover.
+    (async () => {
+      const res = await fetch("/api/uploads/draft-cover", { cache: "no-store" });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) return;
+      const asset = (json.data?.asset || null) as { id?: string } | null;
+      if (asset?.id) setCoverAssetId(String(asset.id));
+    })();
+  }, []);
 
   async function createVoice(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -46,7 +60,7 @@ export default function NewVoicePage() {
     const res = await fetch("/api/voices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...parsed.data, datasetAssetId }),
+      body: JSON.stringify({ ...parsed.data, datasetAssetId, coverAssetId: coverAssetId || undefined }),
     });
     const json = await res.json().catch(() => null);
     setCreating(false);
@@ -72,11 +86,31 @@ export default function NewVoicePage() {
       </div>
 
       <div className="mt-8 grid gap-4 md:grid-cols-2">
-        <DraftDatasetUploaderWithReplace
-          onDraftChange={(asset) => {
-            setDatasetAssetId(asset?.id ?? null);
-          }}
-        />
+        <div className="grid gap-4">
+          <DraftDatasetUploaderWithReplace
+            onDraftChange={(asset) => {
+              setDatasetAssetId(asset?.id ?? null);
+            }}
+          />
+
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold">1b) Cover image</div>
+              <Badge variant={coverAssetId ? "secondary" : "outline"}>{coverAssetId ? "uploaded" : "optional"}</Badge>
+            </div>
+            <div className="mt-3 grid gap-3">
+              <ImageUploader
+                type="voice_cover_image"
+                trigger="frame"
+                preview={{ src: "/api/uploads/draft-cover/image", alt: "Cover", variant: "cover", size: 176 }}
+                onAssetCreated={(asset) => setCoverAssetId(asset.id)}
+              />
+              <div className="text-xs text-muted-foreground">
+                Upload once here. You can replace it anytime later from the voice card menu.
+              </div>
+            </div>
+          </Card>
+        </div>
 
         <Card className="p-6">
           <div className="text-sm font-semibold">2) Voice details</div>

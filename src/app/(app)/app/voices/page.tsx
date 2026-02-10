@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { VoiceActionsMenu } from "@/components/app/voice-actions-menu";
 
 export default async function VoicesPage() {
   const session = await getServerSession(authOptions);
@@ -61,7 +62,10 @@ export default async function VoicesPage() {
                       {v.language || "Language not set"} · {v._count.assets} files · {v._count.versions} versions
                     </div>
                   </div>
-                  <Badge variant="secondary">{v._count.assets > 0 ? "dataset ready" : "no dataset"}</Badge>
+                  <div className="flex items-center gap-1">
+                    <Badge variant="secondary">{v._count.assets > 0 ? "dataset ready" : "no dataset"}</Badge>
+                    <VoiceActionsMenu voiceId={v.id} />
+                  </div>
                 </div>
                 <p className="mt-4 line-clamp-2 text-sm text-muted-foreground">{v.description || "No description."}</p>
                 <div className="mt-5">

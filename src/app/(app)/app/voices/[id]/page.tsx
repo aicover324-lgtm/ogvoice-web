@@ -7,9 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { DeleteVoiceButton } from "@/components/app/delete-voice-button";
 import { CloneVoicePanel } from "@/components/app/clone-voice-panel";
-import { ImageUploader } from "@/components/app/image-uploader";
+import { VoiceActionsMenu } from "@/components/app/voice-actions-menu";
 
 export default async function VoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -46,31 +45,19 @@ export default async function VoiceDetailPage({ params }: { params: Promise<{ id
           <Button asChild variant="outline" className="rounded-full">
             <Link href="/app/voices">Back</Link>
           </Button>
-          <DeleteVoiceButton voiceId={voice.id} />
         </div>
       </div>
 
       <div className="mt-8 grid gap-4">
         <Card className="p-5">
           <div className="flex items-center justify-between">
-            <div className="text-sm font-semibold">Clone AI Voice</div>
-            <Badge variant="secondary">training</Badge>
+            <div className="flex items-center gap-2">
+              <div className="text-sm font-semibold">Clone AI Voice</div>
+              <Badge variant="secondary">training</Badge>
+            </div>
+            <VoiceActionsMenu voiceId={voice.id} />
           </div>
           <Separator className="my-4" />
-
-          <div className="grid gap-3">
-            <div>
-              <div className="text-xs font-semibold text-muted-foreground">Cover image</div>
-              <div className="mt-2">
-                <ImageUploader
-                  type="voice_cover_image"
-                  voiceProfileId={voice.id}
-                  preview={{ src: `/api/voices/${voice.id}/cover`, alt: "Cover", variant: "cover", size: 176 }}
-                />
-              </div>
-            </div>
-            <Separator />
-          </div>
 
           <CloneVoicePanel voiceProfileId={voice.id} hasDataset={hasDataset} />
 

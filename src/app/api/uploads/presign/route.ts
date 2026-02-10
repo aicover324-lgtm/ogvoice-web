@@ -66,9 +66,6 @@ export async function POST(req: Request) {
   if (type === "avatar_image" && voiceProfileId) {
     return err("INVALID_INPUT", "voiceProfileId is not allowed for avatar", 400);
   }
-  if (type === "voice_cover_image" && !voiceProfileId) {
-    return err("INVALID_INPUT", "voiceProfileId is required for cover image", 400);
-  }
 
   const plan = await getUserPlan(session.user.id);
   // Per-type size checks
@@ -94,7 +91,7 @@ export async function POST(req: Request) {
   }
 
   const resolvedVoiceId: string | null =
-    type === "song_input" || type === "voice_cover_image" ? (voiceProfileId ?? null) : null;
+    type === "song_input" ? (voiceProfileId ?? null) : type === "voice_cover_image" ? (voiceProfileId ?? null) : null;
   if (resolvedVoiceId) {
     const voice = await prisma.voiceProfile.findFirst({
       where: { id: resolvedVoiceId, userId: session.user.id, deletedAt: null },
@@ -136,7 +133,11 @@ export async function POST(req: Request) {
       return `${userPrefix}/tmp/avatars/${uuid}_${safeName}`;
     }
     if (type === "voice_cover_image") {
-      return `${userPrefix}/voices/${resolvedVoiceId}/tmp/covers/${uuid}_${safeName}`;
+      // Cover uploads can be drafted on the "new voice" screen before a voice exists.
+      // If voiceProfileId is present, this becomes a replacement for that voice.
+      return resolvedVoiceId
+        ? `${userPrefix}/voices/${resolvedVoiceId}/tmp/covers/${uuid}_${safeName}`
+        : `${userPrefix}/drafts/tmp/covers/${uuid}_${safeName}`;
     }
     if (type === "dataset_audio") {
       return `${userPrefix}/drafts/dataset/${uuid}_${safeName}`;

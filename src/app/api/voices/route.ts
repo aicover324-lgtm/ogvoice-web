@@ -24,6 +24,7 @@ const createSchema = z.object({
   description: z.string().max(500).optional(),
   language: z.string().max(32).optional(),
   datasetAssetId: z.string().min(1).optional(),
+  coverAssetId: z.string().min(1).optional(),
 });
 
 export async function POST(req: Request) {
@@ -67,11 +68,33 @@ export async function POST(req: Request) {
         // Require dataset for MVP create flow.
         throw new Error("DATASET_ASSET_INVALID");
       }
+
+      if (parsed.data.coverAssetId) {
+        const cover = await db.uploadAsset.findFirst({
+          where: {
+            id: parsed.data.coverAssetId,
+            userId: session.user.id,
+            type: "voice_cover_image",
+            voiceProfileId: null,
+          },
+          select: { id: true },
+        });
+        if (!cover) {
+          throw new Error("COVER_ASSET_INVALID");
+        }
+        await db.uploadAsset.update({
+          where: { id: cover.id },
+          data: { voiceProfileId: created.id },
+        });
+      }
       return created;
     });
   } catch (e) {
     if (e instanceof Error && e.message === "DATASET_ASSET_INVALID") {
       return err("DATASET_REQUIRED", "Upload a dataset file before creating this voice.", 409);
+    }
+    if (e instanceof Error && e.message === "COVER_ASSET_INVALID") {
+      return err("COVER_INVALID", "Cover image could not be attached. Try uploading it again.", 409);
     }
     return err("INTERNAL", "Could not create voice.", 500);
   }

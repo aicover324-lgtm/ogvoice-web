@@ -42,9 +42,6 @@ export async function POST(req: Request) {
   if (type === "avatar_image" && voiceProfileId) {
     return err("INVALID_INPUT", "voiceProfileId is not allowed for avatar", 400);
   }
-  if (type === "voice_cover_image" && !voiceProfileId) {
-    return err("INVALID_INPUT", "voiceProfileId is required for cover image", 400);
-  }
 
   if (type === "dataset_audio") {
     const lower = fileName.toLowerCase();
@@ -95,7 +92,9 @@ export async function POST(req: Request) {
     }
   }
   if (type === "voice_cover_image") {
-    const expected = `${userPrefix}/voices/${resolvedVoiceId}/tmp/covers/`;
+    const expected = resolvedVoiceId
+      ? `${userPrefix}/voices/${resolvedVoiceId}/tmp/covers/`
+      : `${userPrefix}/drafts/tmp/covers/`;
     if (!storageKey.startsWith(expected)) {
       return err("INVALID_STORAGE_KEY", "Invalid cover upload key", 403);
     }
@@ -124,13 +123,15 @@ export async function POST(req: Request) {
       const destKey =
         type === "avatar_image"
           ? `u/${session.user.id}/avatars/${uuid}_avatar.webp`
-          : `u/${session.user.id}/voices/${resolvedVoiceId}/covers/${uuid}_cover.webp`;
+          : resolvedVoiceId
+            ? `u/${session.user.id}/voices/${resolvedVoiceId}/covers/${uuid}_cover.webp`
+            : `u/${session.user.id}/drafts/covers/${uuid}_cover.webp`;
 
       const previous = await prisma.uploadAsset.findMany({
         where: {
           userId: session.user.id,
           type,
-          ...(type === "voice_cover_image" ? { voiceProfileId: resolvedVoiceId } : { voiceProfileId: null }),
+          ...(type === "voice_cover_image" ? { voiceProfileId: resolvedVoiceId ?? null } : { voiceProfileId: null }),
         },
         select: { id: true, storageKey: true },
       });
@@ -147,7 +148,7 @@ export async function POST(req: Request) {
       const asset = await prisma.uploadAsset.create({
         data: {
           userId: session.user.id,
-          voiceProfileId: type === "voice_cover_image" ? resolvedVoiceId : null,
+          voiceProfileId: type === "voice_cover_image" ? (resolvedVoiceId ?? null) : null,
           type,
           fileName: isAvatar ? "avatar.webp" : "cover.webp",
           fileSize: optimized.length,
