@@ -55,7 +55,15 @@ export async function POST(req: Request) {
     return err("FILE_TOO_LARGE", "File exceeds plan limit", 413, { maxBytes: maxFile, plan });
   }
 
-  const resolvedVoiceId: string | null = voiceProfileId ?? null;
+  if (type === "dataset_audio" && voiceProfileId) {
+    return err(
+      "DATASET_LOCKED",
+      "Dataset replacement is only available while creating a new voice.",
+      403
+    );
+  }
+
+  const resolvedVoiceId: string | null = type === "song_input" ? (voiceProfileId ?? null) : null;
   if (resolvedVoiceId) {
     const voice = await prisma.voiceProfile.findFirst({
       where: { id: resolvedVoiceId, userId: session.user.id, deletedAt: null },
@@ -76,17 +84,15 @@ export async function POST(req: Request) {
     }
 
     // Draft dataset upload (used on the create-voice screen). One draft per user.
-    if (!resolvedVoiceId) {
-      const draftCount = await prisma.uploadAsset.count({
-        where: { userId: session.user.id, voiceProfileId: null, type: "dataset_audio" },
-      });
-      if (draftCount >= 1) {
-        return err(
-          "DATASET_DRAFT_EXISTS",
-          "You already uploaded a dataset file for a new voice. Replace it to upload a new one.",
-          409
-        );
-      }
+    const draftCount = await prisma.uploadAsset.count({
+      where: { userId: session.user.id, voiceProfileId: null, type: "dataset_audio" },
+    });
+    if (draftCount >= 1) {
+      return err(
+        "DATASET_DRAFT_EXISTS",
+        "You already uploaded a dataset file for a new voice. Replace it to upload a new one.",
+        409
+      );
     }
   }
 

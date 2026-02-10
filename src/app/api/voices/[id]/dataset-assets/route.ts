@@ -1,8 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { err, ok } from "@/lib/api-response";
-import { deleteObjects } from "@/lib/storage/s3";
+import { err } from "@/lib/api-response";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -17,28 +16,11 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   });
   if (!voice) return err("NOT_FOUND", "Voice profile not found", 404);
 
-  const assets = await prisma.uploadAsset.findMany({
-    where: { userId: session.user.id, voiceProfileId, type: "dataset_audio" },
-    select: { id: true, storageKey: true },
-    orderBy: { createdAt: "desc" },
-  });
-  const keys = assets.map((a) => a.storageKey);
-  if (keys.length > 0) await deleteObjects(keys);
-  if (assets.length > 0) {
-    await prisma.uploadAsset.deleteMany({
-      where: { id: { in: assets.map((a) => a.id) } },
-    });
-  }
-
-  await prisma.auditLog.create({
-    data: {
-      userId: session.user.id,
-      action: "dataset.clear",
-      meta: { voiceProfileId, deletedCount: assets.length },
-    },
-  });
-
-  return ok({ deleted: assets.length });
+  return err(
+    "DATASET_LOCKED",
+    "Dataset can only be replaced while creating a new voice.",
+    403
+  );
 }
 
 export const runtime = "nodejs";

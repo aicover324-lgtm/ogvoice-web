@@ -27,6 +27,14 @@ export async function POST(req: Request) {
 
   const { voiceProfileId, type, fileName, fileSize, mimeType, storageKey } = parsed.data;
 
+  if (type === "dataset_audio" && voiceProfileId) {
+    return err(
+      "DATASET_LOCKED",
+      "Dataset replacement is only available while creating a new voice.",
+      403
+    );
+  }
+
   if (type === "dataset_audio") {
     const lower = fileName.toLowerCase();
     if (!datasetAllowedMime.has(mimeType) || !lower.endsWith(".wav")) {
@@ -53,7 +61,7 @@ export async function POST(req: Request) {
     if (!voice) return err("NOT_FOUND", "Voice profile not found", 404);
   }
 
-  if (type === "dataset_audio" && !resolvedVoiceId) {
+  if (type === "dataset_audio") {
     // Draft dataset confirm: enforced via DB unique index (prevents race conditions)
     resolvedVoiceId = undefined;
   }

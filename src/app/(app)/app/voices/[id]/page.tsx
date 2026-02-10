@@ -8,19 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { DeleteVoiceButton } from "@/components/app/delete-voice-button";
-import { DatasetUploaderWithReplace } from "@/components/app/dataset-uploader-with-replace";
 import { CloneVoicePanel } from "@/components/app/clone-voice-panel";
-
-function formatBytes(n: number) {
-  const units = ["B", "KB", "MB", "GB"];
-  let v = n;
-  let i = 0;
-  while (v >= 1024 && i < units.length - 1) {
-    v /= 1024;
-    i += 1;
-  }
-  return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
-}
 
 export default async function VoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -30,13 +18,13 @@ export default async function VoiceDetailPage({ params }: { params: Promise<{ id
   const voice = await prisma.voiceProfile.findFirst({
     where: { id, userId, deletedAt: null },
     include: {
-      assets: { where: { type: "dataset_audio" }, orderBy: { createdAt: "desc" } },
+      assets: { where: { type: "dataset_audio" }, orderBy: { createdAt: "desc" }, take: 1 },
       versions: { orderBy: { createdAt: "desc" }, take: 10 },
     },
   });
   if (!voice) notFound();
 
-  const totalBytes = voice.assets.reduce((acc, a) => acc + a.fileSize, 0);
+  const hasDataset = voice.assets.length > 0;
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
@@ -50,7 +38,7 @@ export default async function VoiceDetailPage({ params }: { params: Promise<{ id
           </div>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{voice.description || "No description."}</p>
           <div className="mt-2 text-xs text-muted-foreground">
-            Dataset: {voice.assets.length} files · {formatBytes(totalBytes)}
+            Dataset: {hasDataset ? "uploaded" : "missing"} · replacement locked after creation
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -61,40 +49,7 @@ export default async function VoiceDetailPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
-      <div className="mt-8 grid gap-4 md:grid-cols-2">
-        <Card className="p-5">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-semibold">Dataset files</div>
-            <Badge variant="secondary">audio</Badge>
-          </div>
-          <Separator className="my-4" />
-
-          <DatasetUploaderWithReplace
-            voiceProfileId={voice.id}
-            hasDataset={voice.assets.length > 0}
-            currentFileName={voice.assets[0]?.fileName}
-          />
-
-          <Separator className="my-4" />
-
-          <div className="grid gap-3">
-            {voice.assets.length === 0 ? (
-              <div className="text-sm text-muted-foreground">No dataset uploads yet.</div>
-            ) : (
-              voice.assets.slice(0, 12).map((a) => (
-                <div key={a.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-medium">{a.fileName}</div>
-                    <div className="mt-0.5 text-xs text-muted-foreground">{formatBytes(a.fileSize)} · {a.mimeType}</div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">{new Date(a.createdAt).toLocaleDateString()}</div>
-                </div>
-              ))
-            )}
-            {voice.assets.length > 12 ? <div className="text-xs text-muted-foreground">Showing latest 12 files.</div> : null}
-          </div>
-        </Card>
-
+      <div className="mt-8 grid gap-4">
         <Card className="p-5">
           <div className="flex items-center justify-between">
             <div className="text-sm font-semibold">Clone AI Voice</div>
@@ -102,7 +57,7 @@ export default async function VoiceDetailPage({ params }: { params: Promise<{ id
           </div>
           <Separator className="my-4" />
 
-          <CloneVoicePanel voiceProfileId={voice.id} hasDataset={voice.assets.length > 0} />
+          <CloneVoicePanel voiceProfileId={voice.id} hasDataset={hasDataset} />
 
           <Separator className="my-4" />
 
