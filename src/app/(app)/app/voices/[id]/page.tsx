@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CloneVoicePanel } from "@/components/app/clone-voice-panel";
 import { VoiceActionsMenu } from "@/components/app/voice-actions-menu";
+import { VoiceCoverThumb } from "@/components/app/voice-cover-thumb";
+import { VoiceCoverBackdrop } from "@/components/app/voice-cover-backdrop";
 
 export default async function VoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -49,47 +51,51 @@ export default async function VoiceDetailPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="mt-8 grid gap-4">
-        <Card className="p-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="text-sm font-semibold">Clone AI Voice</div>
-              <Badge variant="secondary">training</Badge>
-            </div>
-            <VoiceActionsMenu voiceId={voice.id} />
-          </div>
-          <Separator className="my-4" />
-
-          <CloneVoicePanel voiceProfileId={voice.id} hasDataset={hasDataset} />
-
-          <Separator className="my-4" />
-
-          <div className="grid gap-3">
-            {voice.versions.length === 0 ? (
-              <div className="text-sm text-muted-foreground">
-                No model versions yet.
+        <Card className="relative overflow-hidden p-5">
+          <VoiceCoverBackdrop voiceId={voice.id} opacity={0.12} blurClassName="blur-3xl" />
+          <div className="relative z-10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <VoiceCoverThumb voiceId={voice.id} size={44} />
+                <div className="text-sm font-semibold">Clone AI Voice</div>
+                <Badge variant="secondary">training</Badge>
               </div>
-            ) : (
-              voice.versions.map((v) => (
-                <div key={v.id} className="rounded-lg border p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-medium">Version {v.id.slice(0, 8)}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">Created: {new Date(v.createdAt).toLocaleString()}</div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-full"
-                      asChild
-                    >
-                      <a href={`/api/models/presign?versionId=${encodeURIComponent(v.id)}`} target="_blank" rel="noreferrer">
-                        Download
-                      </a>
-                    </Button>
-                  </div>
+              <VoiceActionsMenu voiceId={voice.id} />
+            </div>
+            <Separator className="my-4" />
+
+            <CloneVoicePanel voiceProfileId={voice.id} hasDataset={hasDataset} />
+
+            <Separator className="my-4" />
+
+            <div className="grid gap-3">
+              {voice.versions.length === 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  No model versions yet.
                 </div>
-              ))
-            )}
+              ) : (
+                voice.versions.map((v) => (
+                  <div key={v.id} className="rounded-lg border bg-background/40 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-medium">Version {v.id.slice(0, 8)}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">Created: {new Date(v.createdAt).toLocaleString()}</div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-full"
+                        asChild
+                      >
+                        <a href={`/api/models/presign?versionId=${encodeURIComponent(v.id)}`} target="_blank" rel="noreferrer">
+                          Download
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </Card>
       </div>

@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { VoiceActionsMenu } from "@/components/app/voice-actions-menu";
+import { VoiceCoverThumb } from "@/components/app/voice-cover-thumb";
+import { VoiceCoverBackdrop } from "@/components/app/voice-cover-backdrop";
 
 export default async function VoicesPage() {
   const session = await getServerSession(authOptions);
@@ -52,26 +54,32 @@ export default async function VoicesPage() {
         ) : (
           voices.map((v) => {
             return (
-              <Card key={v.id} className="p-6">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="truncate text-base font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
-                      {v.name}
+              <Card key={v.id} className="relative overflow-hidden p-6">
+                <VoiceCoverBackdrop voiceId={v.id} opacity={0.16} />
+                <div className="relative z-10">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                    <VoiceCoverThumb voiceId={v.id} size={56} />
+                      <div className="min-w-0">
+                        <div className="truncate text-base font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
+                          {v.name}
+                        </div>
+                        <div className="mt-1 text-sm text-muted-foreground">
+                          {v.language || "Language not set"} · {v._count.assets} files · {v._count.versions} versions
+                        </div>
+                      </div>
                     </div>
-                    <div className="mt-1 text-sm text-muted-foreground">
-                      {v.language || "Language not set"} · {v._count.assets} files · {v._count.versions} versions
+                    <div className="flex items-center gap-1">
+                      <Badge variant="secondary">{v._count.assets > 0 ? "dataset ready" : "no dataset"}</Badge>
+                      <VoiceActionsMenu voiceId={v.id} />
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Badge variant="secondary">{v._count.assets > 0 ? "dataset ready" : "no dataset"}</Badge>
-                    <VoiceActionsMenu voiceId={v.id} />
+                  <p className="mt-4 line-clamp-2 text-sm text-muted-foreground">{v.description || "No description."}</p>
+                  <div className="mt-5">
+                    <Button asChild variant="outline" className="rounded-full">
+                      <Link href={`/app/voices/${v.id}`}>Open</Link>
+                    </Button>
                   </div>
-                </div>
-                <p className="mt-4 line-clamp-2 text-sm text-muted-foreground">{v.description || "No description."}</p>
-                <div className="mt-5">
-                  <Button asChild variant="outline" className="rounded-full">
-                    <Link href={`/app/voices/${v.id}`}>Open</Link>
-                  </Button>
                 </div>
               </Card>
             );
