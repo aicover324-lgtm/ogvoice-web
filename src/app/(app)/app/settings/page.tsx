@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BillingPortalButton } from "@/components/app/billing-portal-button";
+import { ImageUploader } from "@/components/app/image-uploader";
 
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions);
@@ -30,6 +31,18 @@ export default async function SettingsPage() {
             <div><span className="text-muted-foreground">Email:</span> {user?.email}</div>
             <div><span className="text-muted-foreground">Name:</span> {user?.name || "-"}</div>
             <div><span className="text-muted-foreground">Joined:</span> {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-"}</div>
+          </div>
+          <div className="mt-5">
+            <div className="text-xs font-semibold text-muted-foreground">Avatar</div>
+            <div className="mt-2">
+              <ImageUploader
+                type="avatar_image"
+                preview={{ src: "/api/users/avatar", alt: "Avatar", variant: "avatar", size: 56 }}
+                onComplete={() => {
+                  /* user-menu uses /api/users/avatar */
+                }}
+              />
+            </div>
           </div>
         </Card>
 

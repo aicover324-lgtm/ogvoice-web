@@ -11,6 +11,8 @@ enum UploadAssetType {
   dataset_audio
   song_input
   generated_output
+  avatar_image
+  voice_cover_image
 }
 
 enum JobStatus {

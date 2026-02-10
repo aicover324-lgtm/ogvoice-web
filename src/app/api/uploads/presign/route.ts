@@ -8,7 +8,7 @@ import { getRequestIp, rateLimit } from "@/lib/rate-limit";
 import { getUserPlan } from "@/lib/plans";
 import { presignPutObject, sanitizeFileName } from "@/lib/storage/s3";
 
-const allowedMime = new Set([
+const allowedAudioMime = new Set([
   "audio/wav",
   "audio/x-wav",
   "audio/mpeg",
@@ -17,11 +17,17 @@ const allowedMime = new Set([
   "audio/x-flac",
 ]);
 
+const allowedImageMime = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
 const datasetAllowedMime = new Set(["audio/wav", "audio/x-wav"]);
 
 const schema = z.object({
   voiceProfileId: z.string().min(1).optional(),
-  type: z.enum(["dataset_audio", "song_input"]),
+  type: z.enum(["dataset_audio", "song_input", "avatar_image", "voice_cover_image"]),
   fileName: z.string().min(1).max(255),
   fileSize: z.number().int().positive(),
   mimeType: z.string().min(1).max(80),
@@ -40,7 +46,15 @@ export async function POST(req: Request) {
   if (!parsed.success) return err("INVALID_INPUT", "Invalid upload presign payload", 400, parsed.error.flatten());
 
   const { fileName, fileSize, mimeType, voiceProfileId, type } = parsed.data;
-  if (!allowedMime.has(mimeType)) return err("UNSUPPORTED_TYPE", "Only wav/mp3/flac audio is allowed", 415);
+  if (type === "dataset_audio" || type === "song_input") {
+    if (!allowedAudioMime.has(mimeType)) {
+      return err("UNSUPPORTED_TYPE", "Only wav/mp3/flac audio is allowed", 415);
+    }
+  } else {
+    if (!allowedImageMime.has(mimeType)) {
+      return err("UNSUPPORTED_TYPE", "Only jpg/png/webp images are allowed", 415);
+    }
+  }
 
   if (type === "dataset_audio") {
     const lower = fileName.toLowerCase();
@@ -49,10 +63,26 @@ export async function POST(req: Request) {
     }
   }
 
+  if (type === "avatar_image" && voiceProfileId) {
+    return err("INVALID_INPUT", "voiceProfileId is not allowed for avatar", 400);
+  }
+  if (type === "voice_cover_image" && !voiceProfileId) {
+    return err("INVALID_INPUT", "voiceProfileId is required for cover image", 400);
+  }
+
   const plan = await getUserPlan(session.user.id);
-  const maxFile = plan === "pro" ? env.UPLOAD_MAX_FILE_BYTES_PRO : env.UPLOAD_MAX_FILE_BYTES_FREE;
-  if (fileSize > maxFile) {
-    return err("FILE_TOO_LARGE", "File exceeds plan limit", 413, { maxBytes: maxFile, plan });
+  // Per-type size checks
+  if (type === "avatar_image" || type === "voice_cover_image") {
+    const maxBytes = env.UPLOAD_MAX_IMAGE_BYTES;
+    if (fileSize > maxBytes) {
+      return err("FILE_TOO_LARGE", "Image exceeds limit", 413, { maxBytes, plan, type });
+    }
+  }
+  if (type === "song_input") {
+    const maxBytes = plan === "pro" ? env.UPLOAD_MAX_FILE_BYTES_PRO : env.UPLOAD_MAX_FILE_BYTES_FREE;
+    if (fileSize > maxBytes) {
+      return err("FILE_TOO_LARGE", "File exceeds plan limit", 413, { maxBytes, plan, type });
+    }
   }
 
   if (type === "dataset_audio" && voiceProfileId) {
@@ -63,7 +93,8 @@ export async function POST(req: Request) {
     );
   }
 
-  const resolvedVoiceId: string | null = type === "song_input" ? (voiceProfileId ?? null) : null;
+  const resolvedVoiceId: string | null =
+    type === "song_input" || type === "voice_cover_image" ? (voiceProfileId ?? null) : null;
   if (resolvedVoiceId) {
     const voice = await prisma.voiceProfile.findFirst({
       where: { id: resolvedVoiceId, userId: session.user.id, deletedAt: null },
@@ -98,13 +129,23 @@ export async function POST(req: Request) {
 
   const safeName = sanitizeFileName(fileName);
   const uuid = crypto.randomUUID();
-  const keyParts = [
-    `u/${session.user.id}`,
-    resolvedVoiceId ? `voices/${resolvedVoiceId}` : type === "dataset_audio" ? "drafts" : "misc",
-    type === "dataset_audio" ? "dataset" : "inputs",
-    `${uuid}_${safeName}`,
-  ];
-  const storageKey = keyParts.join("/");
+
+  const storageKey = (() => {
+    const userPrefix = `u/${session.user.id}`;
+    if (type === "avatar_image") {
+      return `${userPrefix}/tmp/avatars/${uuid}_${safeName}`;
+    }
+    if (type === "voice_cover_image") {
+      return `${userPrefix}/voices/${resolvedVoiceId}/tmp/covers/${uuid}_${safeName}`;
+    }
+    if (type === "dataset_audio") {
+      return `${userPrefix}/drafts/dataset/${uuid}_${safeName}`;
+    }
+    // song_input
+    return resolvedVoiceId
+      ? `${userPrefix}/voices/${resolvedVoiceId}/inputs/${uuid}_${safeName}`
+      : `${userPrefix}/misc/inputs/${uuid}_${safeName}`;
+  })();
 
   const uploadUrl = await presignPutObject({
     key: storageKey,
