@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { err, ok } from "@/lib/api-response";
 import { runpodStatus } from "@/lib/runpod";
+import { deleteObjects } from "@/lib/storage/s3";
 
 const querySchema = z.object({
   jobId: z.string().min(1),
@@ -27,6 +28,8 @@ export async function GET(req: Request) {
       runpodRequestId: true,
       artifactKey: true,
       voiceProfileId: true,
+      datasetKey: true,
+      datasetAssetId: true,
     },
   });
   if (!job) return err("NOT_FOUND", "Training job not found", 404);
@@ -39,10 +42,45 @@ export async function GET(req: Request) {
     const status = String(st.status || "").toUpperCase();
 
     if (status === "COMPLETED") {
+      const out = st.output && typeof st.output === "object" ? (st.output as Record<string, unknown>) : null;
+      const datasetArchiveKey =
+        out && typeof out.datasetArchiveKey === "string" ? (out.datasetArchiveKey as string) : null;
+      const datasetArchiveBytes =
+        out && typeof out.datasetArchiveBytes === "number" ? (out.datasetArchiveBytes as number) : null;
+
       await prisma.trainingJob.update({
         where: { id: job.id },
         data: { status: "succeeded", progress: 100 },
       });
+
+      // If runner produced a FLAC archive, update the dataset asset to point at it
+      // and delete the original WAV to save storage.
+      if (datasetArchiveKey && job.datasetAssetId) {
+        const asset = await prisma.uploadAsset.findFirst({
+          where: { id: job.datasetAssetId, userId: session.user.id, type: "dataset_audio" },
+          select: { id: true, storageKey: true, fileName: true },
+        });
+
+        if (asset) {
+          const base = (asset.fileName || "dataset.wav").replace(/\.wav$/i, "");
+          const nextName = `${base}.flac`;
+          await prisma.uploadAsset.update({
+            where: { id: asset.id },
+            data: {
+              storageKey: datasetArchiveKey,
+              mimeType: "audio/flac",
+              fileName: nextName,
+              fileSize: datasetArchiveBytes ?? 0,
+            },
+          });
+
+          // Delete the old WAV object (if different) and the job snapshot WAV.
+          const toDelete = [asset.storageKey];
+          if (job.datasetKey) toDelete.push(job.datasetKey);
+          const uniq = Array.from(new Set(toDelete)).filter((k) => k && k !== datasetArchiveKey);
+          if (uniq.length > 0) await deleteObjects(uniq);
+        }
+      }
 
       // Create model version if not created yet
       const existing = await prisma.voiceModelVersion.findFirst({

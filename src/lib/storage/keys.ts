@@ -4,6 +4,11 @@ type TrainingKeyArgs = {
   jobId: string;
 };
 
+type VoiceKeyArgs = {
+  userId: string;
+  voiceProfileId: string;
+};
+
 const SAFE_KEY_PART_RE = /^[a-zA-Z0-9_-]+$/;
 
 function assertSafeKeyPart(value: string, label: string) {
@@ -28,6 +33,12 @@ function trainingPrefix(args: TrainingKeyArgs) {
   return `u/${args.userId}/v/${args.voiceProfileId}/j/${args.jobId}`;
 }
 
+function voicePrefix(args: VoiceKeyArgs) {
+  assertSafeKeyPart(args.userId, "userId");
+  assertSafeKeyPart(args.voiceProfileId, "voiceProfileId");
+  return `u/${args.userId}/v/${args.voiceProfileId}`;
+}
+
 // Dataset wav for a specific training job
 export function trainingDatasetWavKey(args: TrainingKeyArgs) {
   return `datasets/${trainingPrefix(args)}/dataset.wav`;
@@ -41,4 +52,9 @@ export function trainingModelZipKey(args: TrainingKeyArgs) {
 // Optional: training log artifact
 export function trainingLogKey(args: TrainingKeyArgs) {
   return `models/${trainingPrefix(args)}/train.log`;
+}
+
+// Long-term dataset archive (lossless, smaller than WAV)
+export function voiceDatasetFlacKey(args: VoiceKeyArgs) {
+  return `datasets/${voicePrefix(args)}/dataset.flac`;
 }

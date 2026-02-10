@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { err, ok } from "@/lib/api-response";
-import { trainingDatasetWavKey, trainingModelZipKey } from "@/lib/storage/keys";
+import { trainingDatasetWavKey, trainingModelZipKey, voiceDatasetFlacKey } from "@/lib/storage/keys";
 import { copyObject } from "@/lib/storage/s3";
 import { runpodRun } from "@/lib/runpod";
 
@@ -49,6 +49,10 @@ export async function POST(req: Request) {
     voiceProfileId: voice.id,
     jobId: job.id,
   });
+  const datasetArchiveKey = voiceDatasetFlacKey({
+    userId: session.user.id,
+    voiceProfileId: voice.id,
+  });
   const outKey = trainingModelZipKey({
     userId: session.user.id,
     voiceProfileId: voice.id,
@@ -62,6 +66,7 @@ export async function POST(req: Request) {
     const runRes = await runpodRun({
       datasetKey,
       outKey,
+      datasetArchiveKey,
       // Test defaults (runner also enforces these)
       totalEpoch: 1,
       batchSize: 4,
