@@ -44,8 +44,8 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-md rounded-3xl border-white/12 bg-[#0a1124]/90 p-6 text-white shadow-[0_22px_80px_rgba(2,8,23,0.45)] backdrop-blur-xl">
-      <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/35 bg-cyan-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200">
+    <Card className="og-surface-auth-card og-lift og-hover-cyan w-full max-w-md rounded-3xl p-6">
+      <div className="og-chip-soft og-chip-cyan text-[11px] font-semibold uppercase tracking-[0.16em]">
         <Sparkles className="h-3.5 w-3.5" />
         Welcome back
       </div>
@@ -75,7 +75,7 @@ export function LoginForm() {
             type="email"
             autoComplete="email"
             required
-            className="h-11 border-white/15 bg-white/[0.04] text-white placeholder:text-slate-400 focus-visible:border-cyan-300/60 focus-visible:ring-cyan-400/40"
+            className="og-input-premium focus-visible:border-cyan-300/60 focus-visible:ring-cyan-400/40"
           />
         </div>
 
@@ -89,14 +89,14 @@ export function LoginForm() {
             type="password"
             autoComplete="current-password"
             required
-            className="h-11 border-white/15 bg-white/[0.04] text-white placeholder:text-slate-400 focus-visible:border-cyan-300/60 focus-visible:ring-cyan-400/40"
+            className="og-input-premium focus-visible:border-cyan-300/60 focus-visible:ring-cyan-400/40"
           />
         </div>
 
         <Button
           type="submit"
           disabled={loading}
-          className="mt-1 h-11 rounded-xl bg-gradient-to-r from-cyan-600 to-fuchsia-600 text-sm font-semibold text-white hover:from-cyan-500 hover:to-fuchsia-500 disabled:pointer-events-auto disabled:cursor-not-allowed"
+          className="og-btn-gradient mt-1 h-11 rounded-xl text-sm font-semibold disabled:pointer-events-auto disabled:cursor-not-allowed"
         >
           <LogIn className="h-4 w-4" />
           {loading ? "Signing in..." : "Sign in"}

@@ -205,7 +205,7 @@ export function NewVoiceProfilePage() {
               className={
                 (
                   canSubmit
-                    ? "relative h-11 rounded-full px-7 text-sm font-semibold shadow-lg shadow-black/10 dark:shadow-black/30 bg-gradient-to-r from-cyan-600 to-fuchsia-600 hover:from-cyan-500 hover:to-fuchsia-500 cursor-pointer"
+                    ? "og-btn-gradient relative h-11 rounded-full px-7 text-sm font-semibold shadow-lg shadow-black/10 dark:shadow-black/30 cursor-pointer"
                     : "relative h-11 rounded-full px-7 text-sm font-semibold border border-black/10 bg-muted text-muted-foreground shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-white/60"
                 ) + " disabled:pointer-events-auto disabled:cursor-not-allowed"
               }

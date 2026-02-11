@@ -25,8 +25,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
       <div className="relative mx-auto grid max-w-6xl gap-10 px-4 pb-16 pt-8 md:grid-cols-2 md:pt-14">
         <div className="hidden md:block">
-          <div className="rounded-3xl border border-white/12 bg-white/[0.04] p-8 shadow-[0_24px_80px_rgba(2,8,23,0.45)] backdrop-blur-xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/35 bg-cyan-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200">
+          <div className="og-surface-glass og-lift og-hover-cyan rounded-3xl p-8 shadow-[0_24px_80px_rgba(2,8,23,0.45)]">
+            <div className="og-chip-soft og-chip-cyan text-xs font-semibold uppercase tracking-[0.18em]">
               Premium Workflow
             </div>
 

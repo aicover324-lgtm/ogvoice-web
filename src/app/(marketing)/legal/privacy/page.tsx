@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -8,9 +9,7 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-14">
-      <h1 className="text-3xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
-        Privacy Policy
-      </h1>
+      <PageHeader title="Privacy Policy" size="lg" />
       <div className="mt-6 space-y-4 text-sm leading-7 text-muted-foreground">
         <p>This is template text for an MVP. Replace with counsel-reviewed policy before production.</p>
         <div>

@@ -1,19 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { PremiumCard } from "@/components/app/premium-card";
 
 export default async function DashboardPage() {
   return (
-    <main className="relative mx-auto max-w-6xl px-4 py-10">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
-          Create Voice
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Clone your AI singing voice in 3 simple steps.
-        </p>
-      </div>
+    <main className="og-app-main relative">
+      <PageHeader title="Create Voice" description="Clone your AI singing voice in 3 simple steps." />
 
       <Card className="relative mt-6 overflow-hidden border border-black/5 bg-white/70 p-0 shadow-[0_18px_60px_rgba(2,8,23,0.10)] backdrop-blur-md dark:border-white/10 dark:bg-slate-950/95 dark:shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
         <div className="relative aspect-[21/9] w-full">
@@ -96,7 +90,7 @@ export default async function DashboardPage() {
           <Link
             href="/app/create/new"
             aria-label="Start creating an AI voice"
-            className="group relative inline-flex h-12 items-center justify-center rounded-full bg-gradient-to-r from-cyan-600 to-fuchsia-600 px-7 text-sm font-semibold tracking-tight text-white shadow-[0_18px_60px_rgba(2,8,23,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            className="og-btn-gradient group relative inline-flex h-12 items-center justify-center rounded-full px-7 text-sm font-semibold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             <span className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-white/15" />
             <span className="pointer-events-none absolute inset-0 rounded-full opacity-0 transition-opacity duration-200 group-hover:opacity-100 bg-[radial-gradient(60%_70%_at_30%_20%,rgba(255,255,255,0.26),transparent_55%)]" />

@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { RestoreVoiceButton, PurgeVoiceButton } from "@/components/app/trash-actions";
+import { PageHeader } from "@/components/ui/page-header";
 import { AlertTriangle } from "lucide-react";
 
 function formatBytes(n: number) {
@@ -42,20 +43,16 @@ export default async function TrashPage() {
   });
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
-            Trash
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Deleted voices stay here for a while. You can restore them, or delete forever.
-          </p>
-        </div>
-        <Link className="text-sm underline underline-offset-4" href="/app/voices">
-          Back to voices
-        </Link>
-      </div>
+    <main className="og-app-main">
+      <PageHeader
+        title="Trash"
+        description="Deleted voices stay here for a while. You can restore them, or delete forever."
+        actions={
+          <Link className="text-sm underline underline-offset-4" href="/app/voices">
+            Back to voices
+          </Link>
+        }
+      />
 
       <Card className="mt-6 p-5">
         <div className="flex items-center justify-between">

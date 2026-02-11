@@ -37,16 +37,16 @@ const faqs = [
 export default function FaqPage() {
   return (
     <main className="bg-[#070b18] text-white">
-      <section className="relative overflow-hidden border-b border-white/10">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-x-0 top-0 h-[340px] bg-[radial-gradient(circle_at_50%_0%,rgba(6,182,212,0.2),transparent_64%)]" />
+      <section className="og-section-shell">
+        <div className="og-glow-layer">
+          <div className="og-glow-top-sm" />
           <div className="absolute -left-16 top-10 h-64 w-64 rounded-full bg-cyan-500/18 blur-[100px]" />
           <div className="absolute -right-20 top-8 h-72 w-72 rounded-full bg-fuchsia-500/15 blur-[110px]" />
         </div>
 
-        <div className="relative mx-auto max-w-6xl px-4 py-16 md:py-20">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/35 bg-cyan-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200">
+        <div className="og-section-inner">
+          <div className="og-section-head">
+            <div className="og-chip-soft og-chip-cyan text-xs font-semibold uppercase tracking-[0.16em]">
               <Sparkles className="h-3.5 w-3.5" />
               Quick answers
             </div>
@@ -62,7 +62,7 @@ export default function FaqPage() {
             {faqs.map((item) => (
               <Card
                 key={item.q}
-                className="rounded-2xl border-white/12 bg-[#0a1021]/88 p-6 text-white shadow-[0_12px_44px_rgba(2,8,23,0.32)]"
+                className="og-surface-dark og-lift og-hover-cyan rounded-2xl p-6 shadow-[0_12px_44px_rgba(2,8,23,0.32)]"
               >
                 <div className="flex items-start gap-3">
                   <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />

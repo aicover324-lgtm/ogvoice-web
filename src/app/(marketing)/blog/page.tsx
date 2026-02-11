@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata: Metadata = {
   title: "Blog",
@@ -9,12 +10,12 @@ export const metadata: Metadata = {
 export default function BlogIndexPage() {
   return (
     <main className="mx-auto max-w-6xl px-4 py-14">
-      <h1 className="text-3xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
-        Blog
-      </h1>
-      <p className="mt-3 max-w-2xl text-muted-foreground">
-        Placeholder for launch content (product updates, training guides, case studies).
-      </p>
+      <PageHeader
+        title="Blog"
+        description="Placeholder for launch content (product updates, training guides, case studies)."
+        size="lg"
+        descriptionClassName="max-w-2xl"
+      />
       <div className="mt-10 grid gap-4">
         <Card className="p-6">
           <div className="text-sm font-semibold">Coming soon</div>

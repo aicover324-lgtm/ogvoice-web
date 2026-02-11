@@ -13,16 +13,16 @@ export const metadata: Metadata = {
 export default function PricingPage() {
   return (
     <main className="bg-[#070b18] text-white">
-      <section className="relative overflow-hidden border-b border-white/10">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-x-0 top-0 h-[360px] bg-[radial-gradient(circle_at_50%_0%,rgba(6,182,212,0.22),transparent_62%)]" />
+      <section className="og-section-shell">
+        <div className="og-glow-layer">
+          <div className="og-glow-top-md" />
           <div className="absolute -left-20 top-10 h-64 w-64 rounded-full bg-cyan-500/18 blur-[100px]" />
           <div className="absolute -right-16 top-8 h-72 w-72 rounded-full bg-fuchsia-500/16 blur-[110px]" />
         </div>
 
-        <div className="relative mx-auto max-w-6xl px-4 py-16 md:py-20">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/35 bg-cyan-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200">
+        <div className="og-section-inner">
+          <div className="og-section-head">
+            <div className="og-chip-soft og-chip-cyan text-xs font-semibold uppercase tracking-[0.16em]">
               <Sparkles className="h-3.5 w-3.5" />
               Transparent pricing
             </div>
@@ -35,7 +35,7 @@ export default function PricingPage() {
           </div>
 
           <div className="mx-auto mt-12 grid max-w-4xl gap-5 md:grid-cols-2">
-            <Card className="rounded-3xl border-white/12 bg-[#0a1021]/85 p-7 text-white shadow-[0_16px_60px_rgba(2,8,23,0.35)]">
+            <Card className="og-surface-dark og-lift og-hover-cyan rounded-3xl p-7 shadow-[0_16px_60px_rgba(2,8,23,0.35)]">
               <div className="text-sm font-medium text-slate-300">Starter</div>
               <div className="mt-3 flex items-end gap-1">
                 <span className="text-4xl font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
@@ -60,14 +60,14 @@ export default function PricingPage() {
               <Button
                 asChild
                 variant="outline"
-                className="mt-8 w-full border-white/20 bg-white/5 text-white hover:bg-white/10"
+                className="og-btn-outline-soft mt-8 h-11 w-full rounded-xl border-white/20 bg-white/5 text-white hover:bg-white/10"
               >
                 <Link href="/register">Start free</Link>
               </Button>
             </Card>
 
-            <Card className="relative rounded-3xl border-cyan-300/55 bg-[#0a1021]/95 p-7 text-white shadow-[0_0_0_1px_rgba(217,70,239,0.25),0_20px_70px_rgba(2,8,23,0.4)]">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-cyan-300/60 bg-gradient-to-r from-cyan-600 to-fuchsia-600 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]">
+            <Card className="og-lift og-hover-fuchsia relative rounded-3xl border-cyan-300/55 bg-[#0a1021]/95 p-7 text-white shadow-[0_0_0_1px_rgba(217,70,239,0.25),0_20px_70px_rgba(2,8,23,0.4)]">
+              <div className="og-chip-soft og-chip-gradient absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-semibold uppercase tracking-[0.16em]">
                 Most popular
               </div>
 

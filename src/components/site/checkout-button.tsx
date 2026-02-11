@@ -28,7 +28,7 @@ export function CheckoutButton({ label, className }: { label: string; className?
   return (
     <Button
       className={cn(
-        "h-11 w-full rounded-xl bg-gradient-to-r from-cyan-600 to-fuchsia-600 text-white hover:from-cyan-500 hover:to-fuchsia-500 disabled:pointer-events-auto disabled:cursor-not-allowed",
+        "og-btn-gradient h-11 w-full rounded-xl disabled:pointer-events-auto disabled:cursor-not-allowed",
         className
       )}
       onClick={onClick}

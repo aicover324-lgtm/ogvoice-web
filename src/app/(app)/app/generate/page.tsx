@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { GenerateForm } from "@/components/app/generate-form";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default async function GeneratePage() {
   const session = await getServerSession(authOptions);
@@ -13,13 +14,8 @@ export default async function GeneratePage() {
   });
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
-          Generate Song
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">End-to-end flow with placeholder outputs.</p>
-      </div>
+    <main className="og-app-main">
+      <PageHeader title="Generate Song" description="End-to-end flow with placeholder outputs." />
 
       <div className="mt-8">
         {voices.length === 0 ? (

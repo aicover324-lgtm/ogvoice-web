@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -8,9 +9,7 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-14">
-      <h1 className="text-3xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
-        Terms of Service
-      </h1>
+      <PageHeader title="Terms of Service" size="lg" />
       <div className="mt-6 space-y-4 text-sm leading-7 text-muted-foreground">
         <p>Template terms for MVP only. Replace with counsel-reviewed terms before production.</p>
         <div>

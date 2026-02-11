@@ -29,7 +29,7 @@ export default async function VoiceDetailPage({ params }: { params: Promise<{ id
   const hasDataset = voice.assets.length > 0;
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10">
+    <main className="og-app-main">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">

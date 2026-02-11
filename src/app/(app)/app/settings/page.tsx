@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BillingPortalButton } from "@/components/app/billing-portal-button";
 import { ImageUploader } from "@/components/app/image-uploader";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions);
@@ -16,13 +17,8 @@ export default async function SettingsPage() {
   ]);
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
-          Settings
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">Profile, billing, and API placeholders.</p>
-      </div>
+    <main className="og-app-main">
+      <PageHeader title="Settings" description="Profile, billing, and API placeholders." />
 
       <div className="mt-8 grid gap-4 md:grid-cols-2">
         <Card className="p-6">

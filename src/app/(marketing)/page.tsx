@@ -77,16 +77,35 @@ export default function HomePage() {
 
   return (
     <main className="bg-[#070b18] text-white">
-      <section className="relative overflow-hidden border-b border-white/10 pt-10">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-x-0 top-0 h-[460px] bg-[radial-gradient(circle_at_50%_0%,rgba(6,182,212,0.24),transparent_60%)]" />
+      <section className="og-section-shell pt-10">
+        <div className="og-glow-layer">
+          <div className="og-glow-top-lg" />
           <div className="absolute -left-20 top-24 h-72 w-72 rounded-full bg-cyan-500/20 blur-[100px]" />
           <div className="absolute -right-12 top-16 h-80 w-80 rounded-full bg-fuchsia-500/18 blur-[110px]" />
         </div>
 
         <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-16 md:pb-24 md:pt-24">
+          <div className="mx-auto mb-10 max-w-5xl md:mb-12">
+            <div className="og-surface-panel rounded-[1.75rem] p-2 shadow-[0_28px_90px_rgba(2,8,23,0.45)]">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-[1.35rem] border border-white/12">
+                <video
+                  src="/banner_video.mp4"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="auto"
+                  className="h-full w-full object-cover will-change-transform motion-safe:animate-[og-video-drift_8s_ease-in-out_infinite]"
+                  aria-label="OG Voice showcase video"
+                />
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_12%,rgba(255,255,255,0.06),transparent_55%)]" />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#070b18]/35 via-transparent to-transparent" />
+              </div>
+            </div>
+          </div>
+
           <div className="mx-auto max-w-4xl text-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/35 bg-cyan-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200">
+            <div className="og-chip-soft og-chip-cyan text-xs font-semibold uppercase tracking-[0.18em]">
               <Sparkles className="h-3.5 w-3.5" />
               Next-gen clone voice experience
             </div>
@@ -109,28 +128,28 @@ export default function HomePage() {
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button
                 asChild
-                className="h-11 rounded-xl bg-gradient-to-r from-cyan-600 to-fuchsia-600 px-6 text-sm font-semibold text-white shadow-[0_10px_36px_rgba(6,182,212,0.35)] hover:from-cyan-500 hover:to-fuchsia-500"
+                className="og-btn-gradient h-11 rounded-xl px-6 text-sm font-semibold"
               >
                 <Link href="/register">Start free</Link>
               </Button>
               <Button
                 asChild
                 variant="outline"
-                className="h-11 rounded-xl border-white/20 bg-white/5 px-6 text-sm font-semibold text-white hover:bg-white/10"
+                className="og-btn-outline-soft h-11 rounded-xl border-white/20 bg-white/5 px-6 text-sm font-semibold text-white hover:bg-white/10"
               >
                 <Link href="#how-it-works">How it works</Link>
               </Button>
             </div>
           </div>
 
-          <div className="mx-auto mt-12 max-w-4xl rounded-3xl border border-white/15 bg-white/[0.03] p-2 shadow-[0_26px_80px_rgba(2,8,23,0.45)] backdrop-blur">
+          <div className="og-surface-panel og-lift og-hover-cyan mx-auto mt-12 max-w-4xl rounded-3xl p-2 shadow-[0_26px_80px_rgba(2,8,23,0.45)]">
             <div className="rounded-2xl border border-white/10 bg-[#0d1328] p-5 md:p-7">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-sm font-semibold">Clone Voice panel</div>
                   <div className="text-xs text-slate-400">Upload voice - Clone - Create</div>
                 </div>
-                <div className="rounded-full border border-cyan-400/35 bg-cyan-500/10 px-2.5 py-1 text-[11px] font-medium text-cyan-200">
+                <div className="og-chip-soft og-chip-cyan px-2.5 text-[11px] font-medium">
                   Live flow
                 </div>
               </div>
@@ -142,7 +161,7 @@ export default function HomePage() {
                   { t: "Clone status", d: "Real-time card animation while cloning" },
                   { t: "Model ready", d: "Start using your cloned voice immediately" },
                 ].map((item, i) => (
-                  <div key={item.t} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                  <div key={item.t} className="og-surface-panel og-lift rounded-xl p-4 hover:border-cyan-300/35 hover:bg-white/[0.05]">
                     <div className="text-xs text-cyan-200">Step {i + 1}</div>
                     <div className="mt-1 text-sm font-semibold">{item.t}</div>
                     <p className="mt-1 text-xs text-slate-400">{item.d}</p>
@@ -152,7 +171,7 @@ export default function HomePage() {
 
               <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
                 {["Quick setup", "Clean UI", "Fast results"].map((tag) => (
-                  <span key={tag} className="rounded-full border border-white/12 bg-white/[0.03] px-2.5 py-1 text-slate-300">
+                  <span key={tag} className="og-chip-soft og-chip-muted px-2.5 text-slate-300">
                     {tag}
                   </span>
                 ))}
@@ -163,7 +182,7 @@ export default function HomePage() {
       </section>
 
       <section id="how-it-works" className="border-b border-white/10 bg-[#050913] py-20">
-        <div className="mx-auto max-w-6xl px-4">
+        <div className="og-container">
           <div className="mb-12 text-center">
             <div className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Process</div>
             <h2 className="mt-3 text-3xl font-semibold md:text-4xl" style={{ fontFamily: "var(--font-heading)" }}>
@@ -177,7 +196,7 @@ export default function HomePage() {
               return (
                 <Card
                   key={step.title}
-                  className="border-white/10 bg-[#0a1021]/80 p-6 text-white shadow-[0_10px_40px_rgba(2,8,23,0.28)] transition-colors hover:border-cyan-400/35"
+                  className="og-lift og-hover-cyan border-white/10 bg-[#0a1021]/80 p-6 text-white shadow-[0_10px_40px_rgba(2,8,23,0.28)]"
                 >
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-500/18 text-cyan-300">
                     <Icon className="h-5 w-5" />
@@ -194,7 +213,7 @@ export default function HomePage() {
       </section>
 
       <section id="features" className="border-b border-white/10 bg-[#070d1d] py-20">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 md:grid-cols-2">
+        <div className="og-container grid items-center gap-10 md:grid-cols-2">
           <div>
             <h2 className="text-3xl font-semibold leading-tight md:text-5xl" style={{ fontFamily: "var(--font-heading)" }}>
               Not complicated,
@@ -226,7 +245,7 @@ export default function HomePage() {
               return (
                 <Card
                   key={item.title}
-                  className="border-white/10 bg-white/[0.04] p-5 text-white shadow-[0_10px_34px_rgba(2,8,23,0.25)]"
+                  className="og-lift og-hover-cyan border-white/10 bg-white/[0.04] p-5 text-white shadow-[0_10px_34px_rgba(2,8,23,0.25)]"
                 >
                   <Icon className="h-5 w-5 text-fuchsia-300" />
                   <div className="mt-3 text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
@@ -241,7 +260,7 @@ export default function HomePage() {
       </section>
 
       <section id="pricing" className="border-b border-white/10 bg-[#050913] py-20">
-        <div className="mx-auto max-w-6xl px-4">
+        <div className="og-container">
           <div className="text-center">
             <h2 className="text-3xl font-semibold md:text-4xl" style={{ fontFamily: "var(--font-heading)" }}>
               Simple plans, clear choice
@@ -252,7 +271,7 @@ export default function HomePage() {
           </div>
 
           <div className="mx-auto mt-10 grid max-w-4xl gap-5 md:grid-cols-2">
-            <Card className="border-white/12 bg-[#0a1021]/80 p-6 text-white">
+            <Card className="og-surface-dark og-lift og-hover-cyan p-6">
               <div className="text-sm text-slate-300">Starter</div>
               <div className="mt-2 text-4xl font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
                 $0
@@ -262,13 +281,13 @@ export default function HomePage() {
                 <li>Access to core upload and clone flow</li>
                 <li>Great for first tests</li>
               </ul>
-              <Button asChild variant="outline" className="mt-6 w-full border-white/20 bg-white/5 text-white hover:bg-white/10">
+              <Button asChild variant="outline" className="og-btn-outline-soft mt-6 h-11 w-full rounded-xl border-white/20 bg-white/5 text-white hover:bg-white/10">
                 <Link href="/register">Start free</Link>
               </Button>
             </Card>
 
-            <Card className="relative border-cyan-300/55 bg-[#0a1021]/95 p-6 text-white shadow-[0_0_0_1px_rgba(217,70,239,0.25)]">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-cyan-300/60 bg-gradient-to-r from-cyan-600 to-fuchsia-600 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]">
+            <Card className="og-lift og-hover-fuchsia relative border-cyan-300/55 bg-[#0a1021]/95 p-6 text-white shadow-[0_0_0_1px_rgba(217,70,239,0.25)]">
+              <div className="og-chip-soft og-chip-gradient absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-semibold uppercase tracking-[0.16em]">
                 Most popular
               </div>
               <div className="text-sm text-slate-300">Pro</div>
@@ -282,7 +301,7 @@ export default function HomePage() {
               </ul>
               <Button
                 asChild
-                className="mt-6 w-full bg-gradient-to-r from-cyan-600 to-fuchsia-600 text-white hover:from-cyan-500 hover:to-fuchsia-500"
+                className="og-btn-gradient mt-6 h-11 w-full rounded-xl"
               >
                 <Link href="/pricing">View plans</Link>
               </Button>
@@ -299,14 +318,14 @@ export default function HomePage() {
 
           <div className="mt-10 space-y-3">
             {faqs.map((item) => (
-              <Card key={item.q} className="border-white/12 bg-[#0a1021]/85 p-5 text-white">
+              <Card key={item.q} className="og-surface-dark og-lift og-hover-cyan p-5">
                 <div className="text-sm font-semibold md:text-base">{item.q}</div>
                 <p className="mt-2 text-sm leading-6 text-slate-300">{item.a}</p>
               </Card>
             ))}
           </div>
 
-          <div className="mt-10 rounded-2xl border border-white/12 bg-white/[0.03] p-6 text-center">
+          <div className="og-surface-panel mt-10 rounded-2xl p-6 text-center">
             <div className="text-xl font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
               Ready to take your voice to the next level?
             </div>
@@ -315,7 +334,7 @@ export default function HomePage() {
             </p>
             <Button
               asChild
-              className="mt-5 h-11 rounded-xl bg-gradient-to-r from-cyan-600 to-fuchsia-600 px-6 text-white hover:from-cyan-500 hover:to-fuchsia-500"
+              className="og-btn-gradient mt-5 h-11 rounded-xl px-6"
             >
               <Link href="/register">Get started</Link>
             </Button>
