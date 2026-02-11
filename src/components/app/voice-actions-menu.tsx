@@ -32,6 +32,8 @@ export function VoiceActionsMenu({
   initialDescription,
   onVoiceUpdated,
   onCoverReplaced,
+  disabled,
+  disabledReason,
 }: {
   voiceId: string;
   initialName?: string;
@@ -39,6 +41,8 @@ export function VoiceActionsMenu({
   initialDescription?: string | null;
   onVoiceUpdated?: (next: { name: string; language: string | null; description: string | null }) => void;
   onCoverReplaced?: () => void;
+  disabled?: boolean;
+  disabledReason?: string;
 }) {
   const router = useRouter();
   const uploaderRef = React.useRef<ImageUploaderHandle | null>(null);
@@ -56,6 +60,12 @@ export function VoiceActionsMenu({
     setLanguage(initialLanguage || "");
     setDescription(initialDescription || "");
   }, [initialName, initialLanguage, initialDescription]);
+
+  React.useEffect(() => {
+    if (disabled && menuOpen) {
+      setMenuOpen(false);
+    }
+  }, [disabled, menuOpen]);
 
   const canEdit = typeof initialName === "string";
 
@@ -119,6 +129,8 @@ export function VoiceActionsMenu({
             variant="ghost"
             className="h-8 w-8 cursor-pointer p-0 disabled:pointer-events-auto disabled:cursor-not-allowed"
             aria-label="Voice settings"
+            title={disabled ? (disabledReason || "Actions are unavailable while training is in progress.") : undefined}
+            disabled={disabled}
           >
             <MoreHorizontal className="h-4 w-4" />
           </Button>

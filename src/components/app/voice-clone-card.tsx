@@ -69,6 +69,8 @@ export function VoiceCloneCard({ voice }: { voice: VoiceCloneCardData }) {
           initialName={meta.name}
           initialLanguage={meta.language}
           initialDescription={meta.description}
+          disabled={cloneState === "cloning"}
+          disabledReason="Actions are locked while training is in progress."
           onVoiceUpdated={(next) => setMeta(next)}
           onCoverReplaced={() => {
             setNonce(Date.now());

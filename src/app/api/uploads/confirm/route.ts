@@ -79,6 +79,24 @@ export async function POST(req: Request) {
     });
     if (!voice) return err("NOT_FOUND", "Voice profile not found", 404);
     resolvedVoiceName = voice.name;
+
+    if (type === "voice_cover_image") {
+      const activeTraining = await prisma.trainingJob.findFirst({
+        where: {
+          userId: session.user.id,
+          voiceProfileId: resolvedVoiceId,
+          status: { in: ["queued", "running"] },
+        },
+        select: { id: true },
+      });
+      if (activeTraining) {
+        return err(
+          "TRAINING_IN_PROGRESS",
+          "Cover replacement is locked while voice training is in progress.",
+          409
+        );
+      }
+    }
   }
 
   if (type === "dataset_audio") {
