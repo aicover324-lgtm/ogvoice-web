@@ -85,25 +85,6 @@ export default function HomePage() {
         </div>
 
         <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-16 md:pb-24 md:pt-24">
-          <div className="mx-auto mb-10 max-w-5xl md:mb-12">
-            <div className="og-surface-panel rounded-[1.75rem] p-2 shadow-[0_28px_90px_rgba(2,8,23,0.45)]">
-              <div className="relative aspect-[4/3] overflow-hidden rounded-[1.35rem] border border-white/12">
-                <video
-                  src="/banner_video.mp4"
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="auto"
-                  className="h-full w-full object-cover will-change-transform motion-safe:animate-[og-video-drift_8s_ease-in-out_infinite]"
-                  aria-label="OG Voice showcase video"
-                />
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_12%,rgba(255,255,255,0.06),transparent_55%)]" />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#070b18]/35 via-transparent to-transparent" />
-              </div>
-            </div>
-          </div>
-
           <div className="mx-auto max-w-4xl text-center">
             <div className="og-chip-soft og-chip-cyan text-xs font-semibold uppercase tracking-[0.18em]">
               <Sparkles className="h-3.5 w-3.5" />
@@ -139,6 +120,25 @@ export default function HomePage() {
               >
                 <Link href="#how-it-works">How it works</Link>
               </Button>
+            </div>
+          </div>
+
+          <div className="mx-auto mt-12 max-w-5xl md:mt-14">
+            <div className="og-surface-panel rounded-[1.75rem] p-2 shadow-[0_28px_90px_rgba(2,8,23,0.45)]">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-[1.35rem] border border-white/12">
+                <video
+                  src="/banner_video.mp4"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="auto"
+                  className="h-full w-full object-cover will-change-transform motion-safe:animate-[og-video-drift_8s_ease-in-out_infinite]"
+                  aria-label="OG Voice showcase video"
+                />
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_12%,rgba(255,255,255,0.06),transparent_55%)]" />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#070b18]/35 via-transparent to-transparent" />
+              </div>
             </div>
           </div>
 
