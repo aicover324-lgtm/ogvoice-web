@@ -18,6 +18,8 @@ type PreviewConfig = {
   alt: string;
   variant: PreviewVariant;
   size?: number;
+  width?: number | string;
+  height?: number | string;
 };
 
 export const ImageUploader = React.forwardRef<ImageUploaderHandle, {
@@ -130,7 +132,7 @@ export const ImageUploader = React.forwardRef<ImageUploaderHandle, {
         throw new Error(confirmJson?.error?.message || "Failed to confirm upload");
       }
 
-       const created = (confirmJson.data?.asset || null) as { id?: string } | null;
+      const created = (confirmJson.data?.asset || null) as { id?: string } | null;
 
       setProgress(100);
       toast.success(type === "avatar_image" ? "Avatar updated" : "Cover updated");
@@ -154,6 +156,8 @@ export const ImageUploader = React.forwardRef<ImageUploaderHandle, {
   }, [preview?.src, previewKey]);
 
   const previewSize = preview?.size ?? (preview?.variant === "avatar" ? 56 : 176);
+  const previewWidth = preview?.width ?? previewSize;
+  const previewHeight = preview?.height ?? previewSize;
   const effectiveTrigger: "button" | "frame" = trigger ?? "button";
 
   if (headless) {
@@ -186,10 +190,10 @@ export const ImageUploader = React.forwardRef<ImageUploaderHandle, {
             aria-label={type === "avatar_image" ? "Upload avatar" : "Upload cover"}
             className={
               preview.variant === "avatar"
-                ? "group relative grid place-items-center overflow-hidden rounded-full border bg-muted"
-                : "group relative grid place-items-center overflow-hidden rounded-xl border bg-muted"
+                ? "group relative grid cursor-pointer place-items-center overflow-hidden rounded-full border bg-muted disabled:cursor-not-allowed"
+                : "group relative grid cursor-pointer place-items-center overflow-hidden rounded-xl border bg-muted disabled:cursor-not-allowed w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             }
-            style={{ width: previewSize, height: previewSize }}
+            style={{ width: previewWidth, height: previewHeight }}
           >
             {previewSrc && previewOk ? (
               // Use <img> (not next/image) to avoid remotePatterns issues with presigned redirects.
