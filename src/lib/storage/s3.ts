@@ -4,6 +4,7 @@ import {
   GetObjectCommand,
   DeleteObjectsCommand,
   CopyObjectCommand,
+  ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "@/lib/env";
@@ -129,4 +130,25 @@ export async function copyObject(args: { fromKey: string; toKey: string }) {
     CopySource: copySource,
   });
   await s3.send(cmd);
+}
+
+export async function listObjectKeysByPrefix(prefix: string) {
+  const keys: string[] = [];
+  let continuationToken: string | undefined;
+
+  do {
+    const cmd = new ListObjectsV2Command({
+      Bucket: env.S3_BUCKET,
+      Prefix: prefix,
+      ContinuationToken: continuationToken,
+      MaxKeys: 1000,
+    });
+    const res = await s3.send(cmd);
+    for (const item of res.Contents || []) {
+      if (item.Key) keys.push(item.Key);
+    }
+    continuationToken = res.IsTruncated ? res.NextContinuationToken : undefined;
+  } while (continuationToken);
+
+  return keys;
 }

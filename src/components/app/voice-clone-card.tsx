@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { Mic2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PremiumCard } from "@/components/app/premium-card";
 import { VoiceActionsMenu } from "@/components/app/voice-actions-menu";
@@ -47,8 +46,9 @@ export function VoiceCloneCard({ voice }: { voice: VoiceCloneCardData }) {
   }, [voice.latestTrainingJob?.status]);
 
   const ringClassName = cn(
-    cloneState === "cloning" && "ring-cyan-500/70 dark:ring-cyan-400/75",
-    cloneState === "cloned" && "ring-fuchsia-500/75 dark:ring-fuchsia-400/80"
+    cloneState === "cloning" &&
+      "ring-2 ring-cyan-500/85 dark:ring-cyan-400/90 motion-safe:animate-[og-clone-border-pulse_2.8s_ease-in-out_infinite]",
+    cloneState === "cloned" && "ring-2 ring-fuchsia-500/90 dark:ring-fuchsia-400/95"
   );
 
   return (
@@ -56,7 +56,6 @@ export function VoiceCloneCard({ voice }: { voice: VoiceCloneCardData }) {
       className="h-full min-h-[520px] p-5"
       contentClassName="flex h-full flex-col"
       ringClassName={ringClassName}
-      overlay={cloneState === "cloning" ? <TrainingOrbitOverlay /> : null}
     >
       <div className="mb-3 flex justify-end">
         <VoiceActionsMenu
@@ -102,22 +101,6 @@ export function VoiceCloneCard({ voice }: { voice: VoiceCloneCardData }) {
         />
       </div>
     </PremiumCard>
-  );
-}
-
-function TrainingOrbitOverlay() {
-  return (
-    <div className="pointer-events-none absolute inset-0 z-20 rounded-2xl [--orbit-gap:10px] [--orbit-size:26px] [--orbit-duration:3.4s]">
-      <div className="absolute inset-0 rounded-2xl p-[1.5px] [background:conic-gradient(from_0deg,rgba(6,182,212,0)_0deg,rgba(6,182,212,0)_318deg,rgba(6,182,212,0.98)_352deg,rgba(6,182,212,0.24)_360deg)] [mask:linear-gradient(#000_0_0)_content-box,linear-gradient(#000_0_0)] [mask-composite:exclude] [-webkit-mask:linear-gradient(#000_0_0)_content-box,linear-gradient(#000_0_0)] [-webkit-mask-composite:xor] motion-safe:animate-[spin_var(--orbit-duration)_linear_infinite]" />
-
-      <div className="absolute left-[var(--orbit-gap)] top-[var(--orbit-gap)] motion-safe:animate-[og-voice-orbit-rect_var(--orbit-duration)_linear_infinite]">
-        <div className="relative flex h-[var(--orbit-size)] w-[var(--orbit-size)] items-center justify-center rounded-full bg-cyan-500 text-white shadow-[0_0_0_2px_rgba(6,182,212,0.35),0_10px_28px_rgba(6,182,212,0.48)] motion-safe:animate-[og-voice-orbit-facing_var(--orbit-duration)_linear_infinite]">
-          <span className="absolute right-full top-1/2 h-[2px] w-20 -translate-y-1/2 bg-gradient-to-l from-cyan-400/95 via-cyan-400/45 to-transparent blur-[0.75px]" />
-          <span className="absolute right-full top-1/2 h-2 w-24 -translate-y-1/2 bg-gradient-to-l from-cyan-400/35 via-cyan-400/14 to-transparent blur-md" />
-          <Mic2 className="h-3.5 w-3.5" />
-        </div>
-      </div>
-    </div>
   );
 }
 

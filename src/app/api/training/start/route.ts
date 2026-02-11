@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
   const voice = await prisma.voiceProfile.findFirst({
     where: { id: parsed.data.voiceProfileId, userId: session.user.id, deletedAt: null },
-    select: { id: true, userId: true },
+    select: { id: true, userId: true, name: true },
   });
   if (!voice) return err("NOT_FOUND", "Voice profile not found", 404);
 
@@ -48,15 +48,18 @@ export async function POST(req: Request) {
     userId: session.user.id,
     voiceProfileId: voice.id,
     jobId: job.id,
+    voiceName: voice.name,
   });
   const datasetArchiveKey = voiceDatasetFlacKey({
     userId: session.user.id,
     voiceProfileId: voice.id,
+    voiceName: voice.name,
   });
   const outKey = trainingModelZipKey({
     userId: session.user.id,
     voiceProfileId: voice.id,
     jobId: job.id,
+    voiceName: voice.name,
   });
 
   try {

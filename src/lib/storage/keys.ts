@@ -4,9 +4,17 @@ type TrainingKeyArgs = {
   jobId: string;
 };
 
+type TrainingNamedKeyArgs = TrainingKeyArgs & {
+  voiceName: string;
+};
+
 type VoiceKeyArgs = {
   userId: string;
   voiceProfileId: string;
+};
+
+type VoiceNamedKeyArgs = VoiceKeyArgs & {
+  voiceName: string;
 };
 
 const SAFE_KEY_PART_RE = /^[a-zA-Z0-9_-]+$/;
@@ -39,14 +47,24 @@ function voicePrefix(args: VoiceKeyArgs) {
   return `u/${args.userId}/v/${args.voiceProfileId}`;
 }
 
+export function canonicalVoiceAssetBaseName(voiceName: string) {
+  if (!voiceName || typeof voiceName !== "string") return "voice";
+  const stem = voiceName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return stem || "voice";
+}
+
 // Dataset wav for a specific training job
-export function trainingDatasetWavKey(args: TrainingKeyArgs) {
-  return `datasets/${trainingPrefix(args)}/dataset.wav`;
+export function trainingDatasetWavKey(args: TrainingNamedKeyArgs) {
+  return `datasets/${trainingPrefix(args)}/${canonicalVoiceAssetBaseName(args.voiceName)}.wav`;
 }
 
 // Zipped inference artifact (e.g. model.pth + index)
-export function trainingModelZipKey(args: TrainingKeyArgs) {
-  return `models/${trainingPrefix(args)}/model.zip`;
+export function trainingModelZipKey(args: TrainingNamedKeyArgs) {
+  return `models/${trainingPrefix(args)}/${canonicalVoiceAssetBaseName(args.voiceName)}.zip`;
 }
 
 // Optional: training log artifact
@@ -54,7 +72,11 @@ export function trainingLogKey(args: TrainingKeyArgs) {
   return `models/${trainingPrefix(args)}/train.log`;
 }
 
+export function voiceDatasetWavKey(args: VoiceNamedKeyArgs) {
+  return `datasets/${voicePrefix(args)}/${canonicalVoiceAssetBaseName(args.voiceName)}.wav`;
+}
+
 // Long-term dataset archive (lossless, smaller than WAV)
-export function voiceDatasetFlacKey(args: VoiceKeyArgs) {
-  return `datasets/${voicePrefix(args)}/dataset.flac`;
+export function voiceDatasetFlacKey(args: VoiceNamedKeyArgs) {
+  return `datasets/${voicePrefix(args)}/${canonicalVoiceAssetBaseName(args.voiceName)}.flac`;
 }
