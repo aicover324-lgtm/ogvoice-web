@@ -4,7 +4,6 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DraftDatasetUploaderWithReplace } from "@/components/app/draft-dataset-uploader-with-replace";
 import { ImageUploader } from "@/components/app/image-uploader";
 import { Badge } from "@/components/ui/badge";
+import { PremiumCard } from "@/components/app/premium-card";
 
 const schema = z.object({
   name: z.string().min(2).max(60),
@@ -133,10 +133,8 @@ export default function NewVoicePage() {
             }}
           />
 
-          <Card className="relative overflow-hidden rounded-2xl border border-black/5 bg-white/75 p-6 shadow-[0_12px_32px_rgba(2,8,23,0.10)] backdrop-blur-md dark:border-white/10 dark:bg-background/35 dark:shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-600/14 via-transparent to-fuchsia-600/14 dark:from-cyan-600/22 dark:to-fuchsia-600/18" />
-            <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/7 dark:ring-white/10" />
-            <div className="relative">
+          <PremiumCard className="p-6">
+            <div>
               <div className="flex items-center justify-between">
                 <div className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>2. Cover Image</div>
                 <Badge variant={coverAssetId ? "secondary" : "outline"}>{coverAssetId ? "uploaded" : "optional"}</Badge>
@@ -160,12 +158,10 @@ export default function NewVoicePage() {
                 <div className="text-xs text-muted-foreground">Upload a cover image</div>
               </div>
             </div>
-          </Card>
+          </PremiumCard>
 
-          <Card className="relative overflow-hidden rounded-2xl border border-black/5 bg-white/75 p-6 shadow-[0_12px_32px_rgba(2,8,23,0.10)] backdrop-blur-md dark:border-white/10 dark:bg-background/35 dark:shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-600/14 via-transparent to-fuchsia-600/14 dark:from-cyan-600/22 dark:to-fuchsia-600/18" />
-            <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/7 dark:ring-white/10" />
-            <div className="relative">
+          <PremiumCard className="p-6">
+            <div>
               <div className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>3. Voice Details</div>
               <div className="mt-4 grid gap-4">
                 <div className="grid gap-2">
@@ -182,7 +178,7 @@ export default function NewVoicePage() {
                 </div>
               </div>
             </div>
-          </Card>
+          </PremiumCard>
         </div>
 
         <div className="mt-8 flex flex-col items-center gap-2">

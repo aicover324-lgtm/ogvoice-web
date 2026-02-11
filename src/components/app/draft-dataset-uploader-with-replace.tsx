@@ -3,9 +3,9 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { Repeat2 } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DatasetUploader, type DatasetUploaderHandle } from "@/components/app/dataset-uploader";
+import { PremiumCard } from "@/components/app/premium-card";
 import { cn } from "@/lib/utils";
 
 type DraftAsset = {
@@ -81,15 +81,7 @@ export function DraftDatasetUploaderWithReplace({
   const heading = title || "1. Singing Voice";
 
   return (
-    <Card
-      className={cn(
-        "relative overflow-hidden rounded-2xl border border-black/5 bg-white/75 p-6 shadow-[0_12px_32px_rgba(2,8,23,0.10)] backdrop-blur-md",
-        "dark:border-white/10 dark:bg-background/35 dark:shadow-[0_18px_50px_rgba(0,0,0,0.35)]",
-        className
-      )}
-    >
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-600/14 via-transparent to-fuchsia-600/14 dark:from-cyan-600/22 dark:to-fuchsia-600/18" />
-      <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/7 dark:ring-white/10" />
+    <PremiumCard className={cn("p-6", className)}>
       <div className="flex items-center justify-between">
         <div className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>{heading}</div>
         <Badge variant={locked ? "secondary" : "outline"}>{locked ? "uploaded" : "required"}</Badge>
@@ -202,6 +194,6 @@ export function DraftDatasetUploaderWithReplace({
           }}
         />
       </div>
-    </Card>
+    </PremiumCard>
   );
 }
