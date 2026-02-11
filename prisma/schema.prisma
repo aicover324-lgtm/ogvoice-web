@@ -163,8 +163,11 @@ model GenerationJob {
   userId         String
   voiceProfileId String
   inputAssetId   String?
+  runpodRequestId String?
+  outputKey      String?
   status         JobStatus @default(queued)
   progress       Int       @default(0)
+  errorMessage   String?
   outputAssetId  String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -174,6 +177,7 @@ model GenerationJob {
 
   @@index([userId, createdAt])
   @@index([voiceProfileId, createdAt])
+  @@index([runpodRequestId])
 }
 
 model Subscription {

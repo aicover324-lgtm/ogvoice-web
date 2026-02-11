@@ -14,6 +14,13 @@ type TrainingCheckpointKeyArgs = {
   datasetAssetId: string;
 };
 
+type GenerationNamedKeyArgs = {
+  userId: string;
+  voiceProfileId: string;
+  jobId: string;
+  voiceName: string;
+};
+
 type VoiceKeyArgs = {
   userId: string;
   voiceProfileId: string;
@@ -111,6 +118,10 @@ export function trainingCheckpointZipKey(args: TrainingCheckpointKeyArgs) {
 export function trainingModelName(voiceProfileId: string) {
   assertSafeKeyPart(voiceProfileId, "voiceProfileId");
   return `voice-${voiceProfileId}`;
+}
+
+export function generationOutputWavKey(args: GenerationNamedKeyArgs) {
+  return `outputs/${trainingPrefix(args)}/${canonicalVoiceAssetBaseName(args.voiceName)}-converted.wav`;
 }
 
 export function voiceDatasetWavKey(args: VoiceNamedKeyArgs) {

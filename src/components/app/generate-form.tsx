@@ -11,7 +11,13 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 
 type Voice = { id: string; name: string; language: string | null };
-type GenJob = { id: string; status: "queued" | "running" | "succeeded" | "failed"; progress: number };
+type GenJob = {
+  id: string;
+  status: "queued" | "running" | "succeeded" | "failed";
+  progress: number;
+  errorMessage?: string | null;
+  outputAssetId?: string | null;
+};
 
 export function GenerateForm({
   voices,
@@ -182,6 +188,8 @@ export function GenerateForm({
           <div className="mt-4 text-sm">
             {job?.status === "succeeded" ? (
               <div>Conversion finished. We will add output playback in the next step.</div>
+            ) : job?.status === "failed" ? (
+              <div className="text-destructive">{job.errorMessage || "Voice conversion failed."}</div>
             ) : (
               <div className="text-muted-foreground">Start conversion to see progress here.</div>
             )}
