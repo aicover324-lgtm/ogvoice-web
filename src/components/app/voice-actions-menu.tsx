@@ -114,7 +114,12 @@ export function VoiceActionsMenu({
     <>
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
-          <Button type="button" variant="ghost" className="h-8 w-8 p-0" aria-label="Voice settings">
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-8 w-8 cursor-pointer p-0 disabled:pointer-events-auto disabled:cursor-not-allowed"
+            aria-label="Voice settings"
+          >
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>

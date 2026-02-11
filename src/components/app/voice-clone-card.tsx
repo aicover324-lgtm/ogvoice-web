@@ -29,7 +29,7 @@ export function VoiceCloneCard({ voice }: { voice: VoiceCloneCardData }) {
 
   return (
     <PremiumCard className="h-full min-h-[520px] p-5" contentClassName="flex h-full flex-col">
-      <div className="absolute right-4 top-4 z-20">
+      <div className="mb-3 flex justify-end">
         <VoiceActionsMenu
           voiceId={voice.id}
           initialName={meta.name}
@@ -42,9 +42,7 @@ export function VoiceCloneCard({ voice }: { voice: VoiceCloneCardData }) {
         />
       </div>
 
-      <div className="relative">
-        <VoiceCoverHero voiceId={voice.id} nonce={nonce} />
-      </div>
+      <VoiceCoverHero voiceId={voice.id} nonce={nonce} />
 
       <div className="mt-4">
         <div className="text-base font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
