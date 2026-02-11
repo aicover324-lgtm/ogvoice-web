@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { CheckCircle2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CheckoutButton } from "@/components/site/checkout-button";
@@ -11,49 +12,99 @@ export const metadata: Metadata = {
 
 export default function PricingPage() {
   return (
-    <main className="mx-auto max-w-6xl px-4 py-14">
-      <div className="max-w-2xl">
-        <h1 className="text-3xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
-          Pricing
-        </h1>
-        <p className="mt-3 text-muted-foreground">
-          Subscription scaffolding is wired via Stripe (test mode). Plan gating is enforced on upload size/quotas.
-        </p>
-      </div>
+    <main className="bg-[#070b18] text-white">
+      <section className="relative overflow-hidden border-b border-white/10">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute inset-x-0 top-0 h-[360px] bg-[radial-gradient(circle_at_50%_0%,rgba(6,182,212,0.22),transparent_62%)]" />
+          <div className="absolute -left-20 top-10 h-64 w-64 rounded-full bg-cyan-500/18 blur-[100px]" />
+          <div className="absolute -right-16 top-8 h-72 w-72 rounded-full bg-fuchsia-500/16 blur-[110px]" />
+        </div>
 
-      <div className="mt-10 grid gap-6 md:grid-cols-2">
-        <Card className="p-6">
-          <div className="text-sm font-medium">Free</div>
-          <div className="mt-2 text-3xl font-semibold">$0</div>
-          <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-            <li>Voice library</li>
-            <li>Dataset uploads (quota-limited)</li>
-            <li>Training jobs (stub)</li>
-          </ul>
-          <div className="mt-6">
-            <Button asChild variant="outline" className="rounded-full">
-              <Link href="/register">Get started</Link>
-            </Button>
-          </div>
-        </Card>
-
-        <Card className="p-6 border-primary/30">
-          <div className="text-sm font-medium">Pro</div>
-          <div className="mt-2 text-3xl font-semibold">$19</div>
-          <div className="text-sm text-muted-foreground">per month</div>
-          <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-            <li>Higher dataset quotas</li>
-            <li>Priority job runner integration (future)</li>
-            <li>Billing portal access</li>
-          </ul>
-          <div className="mt-6 flex flex-col gap-2">
-            <CheckoutButton label="Upgrade (Stripe)" />
-            <div className="text-xs text-muted-foreground">
-              Configure `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `STRIPE_PRICE_PRO_MONTHLY` to enable checkout.
+        <div className="relative mx-auto max-w-6xl px-4 py-16 md:py-20">
+          <div className="mx-auto max-w-3xl text-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/35 bg-cyan-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200">
+              <Sparkles className="h-3.5 w-3.5" />
+              Transparent pricing
             </div>
+            <h1 className="mt-5 text-4xl font-semibold tracking-tight md:text-5xl" style={{ fontFamily: "var(--font-heading)" }}>
+              Pick the plan that fits your workflow
+            </h1>
+            <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-300">
+              Start for free, then upgrade when you need more room for voice cloning and generation.
+            </p>
           </div>
-        </Card>
-      </div>
+
+          <div className="mx-auto mt-12 grid max-w-4xl gap-5 md:grid-cols-2">
+            <Card className="rounded-3xl border-white/12 bg-[#0a1021]/85 p-7 text-white shadow-[0_16px_60px_rgba(2,8,23,0.35)]">
+              <div className="text-sm font-medium text-slate-300">Starter</div>
+              <div className="mt-3 flex items-end gap-1">
+                <span className="text-4xl font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
+                  $0
+                </span>
+                <span className="pb-1 text-sm text-slate-400">/month</span>
+              </div>
+
+              <ul className="mt-6 space-y-3 text-sm text-slate-200">
+                {[
+                  "Create 1 voice profile",
+                  "Core upload and clone workflow",
+                  "Perfect for first tests",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Button
+                asChild
+                variant="outline"
+                className="mt-8 w-full border-white/20 bg-white/5 text-white hover:bg-white/10"
+              >
+                <Link href="/register">Start free</Link>
+              </Button>
+            </Card>
+
+            <Card className="relative rounded-3xl border-cyan-300/55 bg-[#0a1021]/95 p-7 text-white shadow-[0_0_0_1px_rgba(217,70,239,0.25),0_20px_70px_rgba(2,8,23,0.4)]">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-cyan-300/60 bg-gradient-to-r from-cyan-600 to-fuchsia-600 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]">
+                Most popular
+              </div>
+
+              <div className="text-sm font-medium text-slate-300">Pro</div>
+              <div className="mt-3 flex items-end gap-1">
+                <span className="text-4xl font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
+                  $19
+                </span>
+                <span className="pb-1 text-sm text-slate-400">/month</span>
+              </div>
+
+              <ul className="mt-6 space-y-3 text-sm text-slate-200">
+                {[
+                  "Higher usage limits",
+                  "Priority capacity for busy queues",
+                  "Billing portal access",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-8">
+                <CheckoutButton
+                  label="Upgrade with Stripe"
+                  className="shadow-[0_10px_32px_rgba(6,182,212,0.3)]"
+                />
+              </div>
+              <p className="mt-3 text-xs leading-5 text-slate-400">
+                Configure `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `STRIPE_PRICE_PRO_MONTHLY` to enable checkout.
+              </p>
+            </Card>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }

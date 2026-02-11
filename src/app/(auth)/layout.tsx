@@ -3,7 +3,7 @@ import { CheckCircle2, Mic2, Shield } from "lucide-react";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative min-h-dvh overflow-hidden bg-[#060a17] text-white">
+    <div className="relative min-h-dvh overflow-hidden bg-[#070b18] text-white">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(circle_at_50%_0%,rgba(6,182,212,0.22),transparent_62%)]" />
         <div className="absolute -left-24 top-20 h-72 w-72 rounded-full bg-cyan-500/20 blur-[110px]" />

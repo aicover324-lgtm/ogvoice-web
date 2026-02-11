@@ -3,8 +3,9 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-export function CheckoutButton({ label }: { label: string }) {
+export function CheckoutButton({ label, className }: { label: string; className?: string }) {
   const [loading, setLoading] = React.useState(false);
 
   async function onClick() {
@@ -25,7 +26,14 @@ export function CheckoutButton({ label }: { label: string }) {
   }
 
   return (
-    <Button className="w-full rounded-full" onClick={onClick} disabled={loading}>
+    <Button
+      className={cn(
+        "h-11 w-full rounded-xl bg-gradient-to-r from-cyan-600 to-fuchsia-600 text-white hover:from-cyan-500 hover:to-fuchsia-500 disabled:pointer-events-auto disabled:cursor-not-allowed",
+        className
+      )}
+      onClick={onClick}
+      disabled={loading}
+    >
       {loading ? "Redirecting..." : label}
     </Button>
   );

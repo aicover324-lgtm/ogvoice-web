@@ -23,12 +23,12 @@ export function SiteHeader() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" className="hidden text-slate-300 hover:bg-white/10 hover:text-white sm:inline-flex">
+          <Button asChild variant="ghost" className="hidden h-10 rounded-xl text-slate-300 hover:bg-white/10 hover:text-white sm:inline-flex">
             <Link href="/login">Sign in</Link>
           </Button>
           <Button
             asChild
-            className="h-9 rounded-lg bg-gradient-to-r from-cyan-600 to-fuchsia-600 px-4 text-white hover:from-cyan-500 hover:to-fuchsia-500"
+            className="h-10 rounded-xl bg-gradient-to-r from-cyan-600 to-fuchsia-600 px-5 text-white hover:from-cyan-500 hover:to-fuchsia-500"
           >
             <Link href="/register">Start Free</Link>
           </Button>
