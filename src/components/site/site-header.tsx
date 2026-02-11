@@ -15,8 +15,8 @@ export function SiteHeader() {
           </Link>
 
           <nav className="hidden items-center gap-6 text-sm text-slate-300 md:flex">
-            <Link href="/#features" className="transition-colors hover:text-cyan-200">Ozellikler</Link>
-            <Link href="/#how-it-works" className="transition-colors hover:text-cyan-200">Nasil Calisir</Link>
+            <Link href="/#features" className="transition-colors hover:text-cyan-200">Features</Link>
+            <Link href="/#how-it-works" className="transition-colors hover:text-cyan-200">How It Works</Link>
             <Link href="/pricing" className="transition-colors hover:text-cyan-200">Pricing</Link>
             <Link href="/faq" className="transition-colors hover:text-cyan-200">FAQ</Link>
           </nav>
@@ -24,13 +24,13 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-2">
           <Button asChild variant="ghost" className="hidden text-slate-300 hover:bg-white/10 hover:text-white sm:inline-flex">
-            <Link href="/login">Giris Yap</Link>
+            <Link href="/login">Sign in</Link>
           </Button>
           <Button
             asChild
             className="h-9 rounded-lg bg-gradient-to-r from-cyan-600 to-fuchsia-600 px-4 text-white hover:from-cyan-500 hover:to-fuchsia-500"
           >
-            <Link href="/register">Ucretsiz Basla</Link>
+            <Link href="/register">Start Free</Link>
           </Button>
         </div>
       </div>

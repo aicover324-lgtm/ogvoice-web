@@ -9,21 +9,21 @@ export function SiteFooter() {
             OG Voice
           </div>
           <p className="mt-3 max-w-sm text-sm leading-6 text-slate-300">
-            Sesini klonla, yaratimini hizlandir. Karisik ayarlar yerine sade bir uretim deneyimi.
+            Clone your voice and speed up your creativity with a clean workflow instead of complicated setup.
           </p>
         </div>
 
         <div>
-          <div className="text-sm font-semibold text-slate-100">Urun</div>
+          <div className="text-sm font-semibold text-slate-100">Product</div>
           <div className="mt-3 flex flex-col gap-2 text-sm text-slate-300">
-            <Link href="/#features" className="transition-colors hover:text-cyan-200">Ozellikler</Link>
-            <Link href="/#how-it-works" className="transition-colors hover:text-cyan-200">Nasil Calisir</Link>
+            <Link href="/#features" className="transition-colors hover:text-cyan-200">Features</Link>
+            <Link href="/#how-it-works" className="transition-colors hover:text-cyan-200">How It Works</Link>
             <Link href="/pricing" className="transition-colors hover:text-cyan-200">Pricing</Link>
           </div>
         </div>
 
         <div>
-          <div className="text-sm font-semibold text-slate-100">Yasal</div>
+          <div className="text-sm font-semibold text-slate-100">Legal</div>
           <div className="mt-3 flex flex-col gap-2 text-sm text-slate-300">
             <Link href="/legal/terms" className="transition-colors hover:text-cyan-200">Terms</Link>
             <Link href="/legal/privacy" className="transition-colors hover:text-cyan-200">Privacy</Link>
@@ -34,7 +34,7 @@ export function SiteFooter() {
 
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-5 text-xs text-slate-400 md:flex-row md:items-center md:justify-between">
-          <span>(c) {new Date().getFullYear()} OG Voice. Tum haklari saklidir.</span>
+          <span>(c) {new Date().getFullYear()} OG Voice. All rights reserved.</span>
           <span>Cyan + fuchsia powered experience</span>
         </div>
       </div>

@@ -14,64 +14,64 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 export const metadata: Metadata = {
-  title: "OG Voice | Sesini klonla, yeni vokaller uret",
+  title: "OG Voice | Clone your voice, create new vocals",
   alternates: { canonical: "/" },
 };
 
 export default function HomePage() {
   const steps = [
     {
-      title: "Sesini yukle",
-      body: "Kisa bir kayit yukle. Sistem ses rengini ve tarzini anlamaya baslar.",
+      title: "Upload your voice",
+      body: "Upload a short recording. OG Voice starts learning your tone and style.",
       icon: Upload,
     },
     {
-      title: "Klonu baslat",
-      body: "Clone Voice tusuna bas. Klonlama basladiginda karttan anlik takip edersin.",
+      title: "Start cloning",
+      body: "Tap Clone Voice. You can follow the process directly on the card.",
       icon: Mic2,
     },
     {
-      title: "Vokal uret",
-      body: "Hazir olan sesinle yeni denemeler yap, sarkina en uygun yorumu bul.",
+      title: "Create vocals",
+      body: "Use your cloned voice to test ideas and shape the best take for your song.",
       icon: Music4,
     },
   ];
 
   const highlights = [
     {
-      title: "Temiz sonuc",
-      body: "Karisik ekranlar olmadan, ne yapacagini hemen anlarsin.",
+      title: "Clean experience",
+      body: "No clutter. You always know what to do next.",
       icon: Sparkles,
     },
     {
-      title: "Guvenli saklama",
-      body: "Kayitlarin ve profilin sana ozel alanlarda tutulur.",
+      title: "Safe storage",
+      body: "Your recordings and profiles stay in your own account space.",
       icon: ShieldCheck,
     },
     {
-      title: "Hizli akis",
-      body: "Yukleme, klonlama ve deneme adimlari tek bir duzende ilerler.",
+      title: "Fast workflow",
+      body: "Upload, clone, and create in one simple flow.",
       icon: Zap,
     },
     {
-      title: "Kolay kontrol",
-      body: "Ses profillerini duzenle, kapak gorselini degistir, her seyi sade yonet.",
+      title: "Easy control",
+      body: "Edit voice details, replace cover art, and manage everything quickly.",
       icon: WandSparkles,
     },
   ];
 
   const faqs = [
     {
-      q: "Klonlama ne kadar suruyor?",
-      a: "Ses kaydinin uzunluguna ve yogunluga gore degisir. Islem basladiginda kart uzerinden durumunu gorebilirsin.",
+      q: "How long does cloning take?",
+      a: "It depends on your recording length and queue load. Once started, you can track it directly on the card.",
     },
     {
-      q: "Ses verilerim guvende mi?",
-      a: "Evet. Dosyalarin hesabina bagli tutulur ve sadece senin akisinda kullanilir.",
+      q: "Is my voice data safe?",
+      a: "Yes. Your files stay tied to your account and are used only in your own workflow.",
     },
     {
-      q: "Baslamak icin teknik bilgi gerekiyor mu?",
-      a: "Hayir. Mantik basit: kayit yukle, klonla, sonra yeni vokal denemelerini olustur.",
+      q: "Do I need technical skills to start?",
+      a: "No. Just upload your voice, start cloning, and begin creating new vocal takes.",
     },
   ];
 
@@ -88,22 +88,22 @@ export default function HomePage() {
           <div className="mx-auto max-w-4xl text-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/35 bg-cyan-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200">
               <Sparkles className="h-3.5 w-3.5" />
-              Yeni nesil clone voice deneyimi
+              Next-gen clone voice experience
             </div>
 
             <h1
               className="mt-6 text-4xl font-semibold leading-tight tracking-tight md:text-6xl"
               style={{ fontFamily: "var(--font-heading)" }}
             >
-              Sesini klonla,
+              Clone your voice,
               <span className="block bg-gradient-to-r from-cyan-300 to-fuchsia-300 bg-clip-text text-transparent">
-                sarkilarina yeni bir yorum kat.
+                give your songs a new identity.
               </span>
             </h1>
 
             <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-300 md:text-lg">
-              OG Voice ile kaydini yuklersin, klonunu baslatirsin ve hazir oldugunda yeni vokal denemelerini kolayca
-              uretirsin. Her sey sade, hizli ve anlasilir bir akista.
+              With OG Voice, you upload your recording, start cloning, and create fresh vocal ideas in a clean,
+              easy-to-follow workflow.
             </p>
 
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -111,14 +111,14 @@ export default function HomePage() {
                 asChild
                 className="h-11 rounded-xl bg-gradient-to-r from-cyan-600 to-fuchsia-600 px-6 text-sm font-semibold text-white shadow-[0_10px_36px_rgba(6,182,212,0.35)] hover:from-cyan-500 hover:to-fuchsia-500"
               >
-                <Link href="/register">Ucretsiz basla</Link>
+                <Link href="/register">Start free</Link>
               </Button>
               <Button
                 asChild
                 variant="outline"
                 className="h-11 rounded-xl border-white/20 bg-white/5 px-6 text-sm font-semibold text-white hover:bg-white/10"
               >
-                <Link href="#how-it-works">Nasil calisir</Link>
+                <Link href="#how-it-works">How it works</Link>
               </Button>
             </div>
           </div>
@@ -127,23 +127,23 @@ export default function HomePage() {
             <div className="rounded-2xl border border-white/10 bg-[#0d1328] p-5 md:p-7">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-sm font-semibold">Clone Voice paneli</div>
-                  <div className="text-xs text-slate-400">Ses kaydi yukle - Klonla - Uret</div>
+                  <div className="text-sm font-semibold">Clone Voice panel</div>
+                  <div className="text-xs text-slate-400">Upload voice - Clone - Create</div>
                 </div>
                 <div className="rounded-full border border-cyan-400/35 bg-cyan-500/10 px-2.5 py-1 text-[11px] font-medium text-cyan-200">
-                  Canli akis
+                  Live flow
                 </div>
               </div>
 
               <div className="mt-6 grid gap-3 md:grid-cols-2">
                 {[
-                  { t: "Voice profile", d: "Isim, dil ve notlar" },
-                  { t: "Singing voice", d: "Kaydini tek alandan yukle" },
-                  { t: "Clone durumu", d: "Kart cevresinde anlik animasyon" },
-                  { t: "Model hazir", d: "Bittiginde hemen kullanmaya basla" },
+                  { t: "Voice profile", d: "Name, language, and notes" },
+                  { t: "Singing voice", d: "Upload your recording in one place" },
+                  { t: "Clone status", d: "Real-time card animation while cloning" },
+                  { t: "Model ready", d: "Start using your cloned voice immediately" },
                 ].map((item, i) => (
                   <div key={item.t} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                    <div className="text-xs text-cyan-200">Adim {i + 1}</div>
+                    <div className="text-xs text-cyan-200">Step {i + 1}</div>
                     <div className="mt-1 text-sm font-semibold">{item.t}</div>
                     <p className="mt-1 text-xs text-slate-400">{item.d}</p>
                   </div>
@@ -151,7 +151,7 @@ export default function HomePage() {
               </div>
 
               <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
-                {["Kolay kurulum", "Temiz arayuz", "Hizli sonuc"].map((tag) => (
+                {["Quick setup", "Clean UI", "Fast results"].map((tag) => (
                   <span key={tag} className="rounded-full border border-white/12 bg-white/[0.03] px-2.5 py-1 text-slate-300">
                     {tag}
                   </span>
@@ -165,9 +165,9 @@ export default function HomePage() {
       <section id="how-it-works" className="border-b border-white/10 bg-[#050913] py-20">
         <div className="mx-auto max-w-6xl px-4">
           <div className="mb-12 text-center">
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Surec</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Process</div>
             <h2 className="mt-3 text-3xl font-semibold md:text-4xl" style={{ fontFamily: "var(--font-heading)" }}>
-              Nasil calisir?
+              How it works
             </h2>
           </div>
 
@@ -197,20 +197,20 @@ export default function HomePage() {
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 md:grid-cols-2">
           <div>
             <h2 className="text-3xl font-semibold leading-tight md:text-5xl" style={{ fontFamily: "var(--font-heading)" }}>
-              Profesyonel degil,
+              Not complicated,
               <span className="block bg-gradient-to-r from-cyan-300 to-fuchsia-300 bg-clip-text text-transparent">
-                kullanici dostu bir deneyim.
+                just creator-friendly.
               </span>
             </h2>
             <p className="mt-5 max-w-xl text-base leading-7 text-slate-300">
-              Amacimiz teknik detaylari sana yuklemek degil. Sesini yukleyip sonucunu alabilecegin sade bir yol sunuyoruz.
+              You should focus on your sound, not technical setup. OG Voice keeps every step simple and clear.
             </p>
 
             <div className="mt-8 space-y-3">
               {[
-                "Kafa karistirmayan adimlar",
-                "Clone ve uretim akisinda net durum gostergeleri",
-                "Ses profilini tek yerden kolay yonetim",
+                "Straightforward steps",
+                "Clear status while cloning and creating",
+                "Easy voice profile management in one place",
               ].map((item) => (
                 <div key={item} className="flex items-start gap-3 text-sm text-slate-200">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
@@ -244,10 +244,10 @@ export default function HomePage() {
         <div className="mx-auto max-w-6xl px-4">
           <div className="text-center">
             <h2 className="text-3xl font-semibold md:text-4xl" style={{ fontFamily: "var(--font-heading)" }}>
-              Basit planlar, net secimler
+              Simple plans, clear choice
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-300 md:text-base">
-              Istersen ucretsiz basla, islerin buyudukce planini yukselt.
+              Start free, then upgrade when your projects grow.
             </p>
           </div>
 
@@ -258,33 +258,33 @@ export default function HomePage() {
                 $0
               </div>
               <ul className="mt-5 space-y-2 text-sm text-slate-300">
-                <li>1 ses profili olusturma</li>
-                <li>Temel yukleme ve clone akisina erisim</li>
-                <li>Deneme icin ideal baslangic</li>
+                <li>Create 1 voice profile</li>
+                <li>Access to core upload and clone flow</li>
+                <li>Great for first tests</li>
               </ul>
               <Button asChild variant="outline" className="mt-6 w-full border-white/20 bg-white/5 text-white hover:bg-white/10">
-                <Link href="/register">Ucretsiz basla</Link>
+                <Link href="/register">Start free</Link>
               </Button>
             </Card>
 
             <Card className="relative border-cyan-300/55 bg-[#0a1021]/95 p-6 text-white shadow-[0_0_0_1px_rgba(217,70,239,0.25)]">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-cyan-300/60 bg-gradient-to-r from-cyan-600 to-fuchsia-600 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]">
-                En cok secilen
+                Most popular
               </div>
               <div className="text-sm text-slate-300">Pro</div>
               <div className="mt-2 text-4xl font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
                 $19
               </div>
               <ul className="mt-5 space-y-2 text-sm text-slate-300">
-                <li>Daha yuksek kullanim limiti</li>
-                <li>Oncelikli is akisi</li>
-                <li>Buyuyen projeler icin rahat alan</li>
+                <li>Higher usage limits</li>
+                <li>Priority workflow capacity</li>
+                <li>More room for bigger projects</li>
               </ul>
               <Button
                 asChild
                 className="mt-6 w-full bg-gradient-to-r from-cyan-600 to-fuchsia-600 text-white hover:from-cyan-500 hover:to-fuchsia-500"
               >
-                <Link href="/pricing">Planlari gor</Link>
+                <Link href="/pricing">View plans</Link>
               </Button>
             </Card>
           </div>
@@ -294,7 +294,7 @@ export default function HomePage() {
       <section id="faq" className="bg-[#070d1d] py-20">
         <div className="mx-auto max-w-3xl px-4">
           <h2 className="text-center text-3xl font-semibold md:text-4xl" style={{ fontFamily: "var(--font-heading)" }}>
-            Sik sorulan sorular
+            Frequently asked questions
           </h2>
 
           <div className="mt-10 space-y-3">
@@ -308,16 +308,16 @@ export default function HomePage() {
 
           <div className="mt-10 rounded-2xl border border-white/12 bg-white/[0.03] p-6 text-center">
             <div className="text-xl font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
-              Sesini bir sonraki seviyeye tasimaya hazir misin?
+              Ready to take your voice to the next level?
             </div>
             <p className="mx-auto mt-2 max-w-xl text-sm text-slate-300">
-              Hesabini olustur, ilk ses profilini ac ve Clone Voice akisina hemen basla.
+              Create your account, open your first voice profile, and jump into Clone Voice.
             </p>
             <Button
               asChild
               className="mt-5 h-11 rounded-xl bg-gradient-to-r from-cyan-600 to-fuchsia-600 px-6 text-white hover:from-cyan-500 hover:to-fuchsia-500"
             >
-              <Link href="/register">Hemen basla</Link>
+              <Link href="/register">Get started</Link>
             </Button>
           </div>
         </div>
