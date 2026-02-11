@@ -46,16 +46,22 @@ export function VoiceCloneCard({ voice }: { voice: VoiceCloneCardData }) {
   }, [voice.latestTrainingJob?.status]);
 
   const ringClassName = cn(
-    cloneState === "cloning" &&
-      "ring-2 ring-cyan-500/85 dark:ring-cyan-400/90 motion-safe:animate-[og-clone-border-pulse_2.8s_ease-in-out_infinite]",
-    cloneState === "cloned" && "ring-2 ring-fuchsia-500/90 dark:ring-fuchsia-400/95"
+    cloneState === "idle" && ""
   );
+
+  const overlay =
+    cloneState === "cloning" ? (
+      <div className="pointer-events-none absolute inset-0 z-20 rounded-2xl border-[5px] border-cyan-400/95 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.9),0_0_26px_rgba(34,211,238,0.42)] motion-safe:animate-[og-clone-wall-pulse_2.8s_ease-in-out_infinite]" />
+    ) : cloneState === "cloned" ? (
+      <div className="pointer-events-none absolute inset-0 z-20 rounded-2xl border-[5px] border-fuchsia-400/95 shadow-[inset_0_0_0_1px_rgba(232,121,249,0.88),0_0_20px_rgba(232,121,249,0.35)]" />
+    ) : null;
 
   return (
     <PremiumCard
       className="h-full min-h-[520px] p-5"
       contentClassName="flex h-full flex-col"
       ringClassName={ringClassName}
+      overlay={overlay}
     >
       <div className="mb-3 flex justify-end">
         <VoiceActionsMenu
