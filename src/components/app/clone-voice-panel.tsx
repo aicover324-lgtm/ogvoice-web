@@ -11,9 +11,11 @@ type JobStatus = "queued" | "running" | "succeeded" | "failed";
 export function CloneVoicePanel({
   voiceProfileId,
   hasDataset,
+  compact,
 }: {
   voiceProfileId: string;
   hasDataset: boolean;
+  compact?: boolean;
 }) {
   const router = useRouter();
   const [starting, setStarting] = React.useState(false);
@@ -58,7 +60,7 @@ export function CloneVoicePanel({
 
   async function start() {
     if (!hasDataset) {
-      toast.error("Upload a dataset file first.");
+      toast.error("Upload your singing voice recording first.");
       return;
     }
     setStarting(true);
@@ -95,7 +97,7 @@ export function CloneVoicePanel({
         ? "Trained"
         : status === "failed"
           ? "Try again"
-          : "Clone AI Voice";
+          : "Clone Voice";
 
   const statusText =
     status === "queued"
@@ -113,7 +115,7 @@ export function CloneVoicePanel({
       <Button type="button" className="rounded-full" onClick={() => void start()} disabled={!canStart}>
         {label}
       </Button>
-      {jobId ? <div className="text-xs text-muted-foreground">Job: {jobId.slice(0, 12)}</div> : null}
+      {compact ? null : jobId ? <div className="text-xs text-muted-foreground">Job: {jobId.slice(0, 12)}</div> : null}
       {statusText ? <div className="text-xs text-muted-foreground">Status: {statusText}</div> : null}
       {inFlight ? (
         <div className="mt-1">
@@ -121,7 +123,7 @@ export function CloneVoicePanel({
         </div>
       ) : null}
       {errorMessage ? <div className="text-xs text-destructive">{errorMessage}</div> : null}
-      {artifactKey && status === "succeeded" ? (
+      {!compact && artifactKey && status === "succeeded" ? (
         <div className="text-xs text-muted-foreground">Model is ready. It appears in “Model versions”.</div>
       ) : null}
     </div>

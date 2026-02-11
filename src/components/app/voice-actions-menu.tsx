@@ -22,7 +22,13 @@ import {
 } from "@/components/ui/dialog";
 import { ImageUploader, type ImageUploaderHandle } from "@/components/app/image-uploader";
 
-export function VoiceActionsMenu({ voiceId }: { voiceId: string }) {
+export function VoiceActionsMenu({
+  voiceId,
+  onCoverReplaced,
+}: {
+  voiceId: string;
+  onCoverReplaced?: () => void;
+}) {
   const router = useRouter();
   const uploaderRef = React.useRef<ImageUploaderHandle | null>(null);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
@@ -77,7 +83,16 @@ export function VoiceActionsMenu({ voiceId }: { voiceId: string }) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <ImageUploader ref={uploaderRef} headless type="voice_cover_image" voiceProfileId={voiceId} />
+      <ImageUploader
+        ref={uploaderRef}
+        headless
+        type="voice_cover_image"
+        voiceProfileId={voiceId}
+        onComplete={() => {
+          onCoverReplaced?.();
+          router.refresh();
+        }}
+      />
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>

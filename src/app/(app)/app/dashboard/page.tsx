@@ -94,7 +94,7 @@ export default async function DashboardPage() {
         <div className="relative">
           <div className="pointer-events-none absolute -inset-4 rounded-full bg-gradient-to-r from-cyan-500/22 to-fuchsia-500/20 blur-2xl opacity-70 dark:from-cyan-500/28 dark:to-fuchsia-500/26" />
           <Link
-            href="/app/voices/new"
+            href="/app/create/new"
             aria-label="Start creating an AI voice"
             className="group relative inline-flex h-12 items-center justify-center rounded-full bg-gradient-to-r from-cyan-600 to-fuchsia-600 px-7 text-sm font-semibold tracking-tight text-white shadow-[0_18px_60px_rgba(2,8,23,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
