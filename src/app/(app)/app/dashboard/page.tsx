@@ -96,15 +96,24 @@ export default async function DashboardPage() {
           <Link
             href="/app/voices/new"
             aria-label="Start creating an AI voice"
-            className="group relative inline-flex h-12 items-center justify-center pl-7 pr-6 text-sm font-semibold tracking-tight text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            className="group relative inline-flex h-12 items-stretch text-sm font-semibold tracking-tight text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
-            <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-r from-cyan-600 to-fuchsia-600 shadow-[0_18px_60px_rgba(2,8,23,0.22)]" />
-            <span className="pointer-events-none absolute -right-4 top-1/2 h-10 w-10 -translate-y-1/2 bg-gradient-to-r from-cyan-600 to-fuchsia-600 shadow-[0_18px_60px_rgba(2,8,23,0.22)] transition-transform duration-200 group-hover:translate-x-1 [clip-path:polygon(0_0,100%_50%,0_100%,18%_50%)]" />
-            <span className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-white/15" />
-            <span className="pointer-events-none absolute inset-0 rounded-full opacity-0 transition-opacity duration-200 group-hover:opacity-100 bg-[radial-gradient(60%_70%_at_30%_20%,rgba(255,255,255,0.26),transparent_55%)]" />
+            {/* Body */}
+            <span className="relative inline-flex h-12 items-center rounded-l-full bg-gradient-to-r from-cyan-600 to-fuchsia-600 pl-7 pr-6 shadow-[0_18px_60px_rgba(2,8,23,0.22)]">
+              <span className="pointer-events-none absolute inset-0 rounded-l-full ring-1 ring-white/15" />
+              <span className="pointer-events-none absolute inset-0 rounded-l-full opacity-0 transition-opacity duration-200 group-hover:opacity-100 bg-[radial-gradient(60%_70%_at_30%_20%,rgba(255,255,255,0.26),transparent_55%)]" />
+              <span className="relative">Start</span>
+            </span>
 
-            <span className="relative z-10 inline-flex items-center gap-2">
-              Start
+            {/* Arrow head (not overlapped, flush-attached) */}
+            <span
+              className="relative h-12 w-12 bg-gradient-to-r from-cyan-600 to-fuchsia-600 shadow-[0_18px_60px_rgba(2,8,23,0.22)] transition-transform duration-200 group-hover:translate-x-1"
+              style={{
+                clipPath: "polygon(0 0, 100% 50%, 0 100%, 18% 50%)",
+              }}
+              aria-hidden="true"
+            >
+              <span className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100 bg-[radial-gradient(55%_60%_at_15%_20%,rgba(255,255,255,0.22),transparent_55%)]" />
             </span>
           </Link>
         </div>
