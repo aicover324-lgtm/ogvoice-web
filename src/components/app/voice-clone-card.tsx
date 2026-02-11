@@ -51,7 +51,7 @@ export function VoiceCloneCard({ voice }: { voice: VoiceCloneCardData }) {
 
   const overlay =
     cloneState === "cloning" ? (
-      <div className="pointer-events-none absolute inset-0 z-20 rounded-2xl border-[5px] border-cyan-400/95 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.9),0_0_26px_rgba(34,211,238,0.42)] motion-safe:animate-[og-clone-wall-pulse_2.8s_ease-in-out_infinite]" />
+      <div className="pointer-events-none absolute inset-0 z-20 rounded-2xl border-[5px] border-cyan-400/95 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.9),0_0_26px_rgba(34,211,238,0.42)] animate-[og-clone-wall-pulse_1.8s_ease-in-out_infinite] will-change-[opacity,box-shadow,border-color]" />
     ) : cloneState === "cloned" ? (
       <div className="pointer-events-none absolute inset-0 z-20 rounded-2xl border-[5px] border-fuchsia-400/95 shadow-[inset_0_0_0_1px_rgba(232,121,249,0.88),0_0_20px_rgba(232,121,249,0.35)]" />
     ) : null;
