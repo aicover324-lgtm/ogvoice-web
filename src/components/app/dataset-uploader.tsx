@@ -17,6 +17,15 @@ type UploadItem = {
   error?: string;
 };
 
+const DATASET_ALLOWED_MIME = new Set(["audio/wav", "audio/x-wav"]);
+
+function isValidDatasetWavFile(file: File) {
+  const lower = file.name.toLowerCase();
+  if (!lower.endsWith(".wav")) return false;
+  if (!file.type) return true;
+  return DATASET_ALLOWED_MIME.has(file.type.toLowerCase());
+}
+
 function formatBytes(n: number) {
   const units = ["B", "KB", "MB", "GB"];
   let v = n;
@@ -84,6 +93,14 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
     if (type === "dataset_audio" && files.length > 1) {
       toast.error("Dataset upload supports only 1 file.");
       return;
+    }
+
+    if (type === "dataset_audio") {
+      const file = files[0];
+      if (!file || !isValidDatasetWavFile(file)) {
+        toast.error("Dataset must be a .wav file.");
+        return;
+      }
     }
 
     if (files[0]) onFilePicked?.(files[0].name);

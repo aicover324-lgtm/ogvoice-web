@@ -15,6 +15,30 @@ type DraftAsset = {
   createdAt: string;
 };
 
+const DATASET_ALLOWED_MIME = new Set(["audio/wav", "audio/x-wav"]);
+
+function isValidDatasetWavFile(file: File) {
+  const lower = file.name.toLowerCase();
+  if (!lower.endsWith(".wav")) return false;
+  if (!file.type) return true;
+  return DATASET_ALLOWED_MIME.has(file.type.toLowerCase());
+}
+
+function draggedWavState(dt: DataTransfer): "valid" | "invalid" | "unknown" {
+  const items = Array.from(dt.items || []);
+  const fileItems = items.filter((item) => item.kind === "file");
+  if (fileItems.length === 0) return "unknown";
+
+  let sawValid = false;
+  for (const item of fileItems) {
+    const t = (item.type || "").toLowerCase();
+    if (!t) continue;
+    if (!DATASET_ALLOWED_MIME.has(t)) return "invalid";
+    sawValid = true;
+  }
+  return sawValid ? "valid" : "unknown";
+}
+
 export function DraftDatasetUploaderWithReplace({
   onDraftChange,
   title,
@@ -28,7 +52,7 @@ export function DraftDatasetUploaderWithReplace({
   const pickerRef = React.useRef<HTMLInputElement | null>(null);
   const [draft, setDraft] = React.useState<DraftAsset | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [dragActive, setDragActive] = React.useState(false);
+  const [dragState, setDragState] = React.useState<"idle" | "valid" | "invalid">("idle");
 
   const loadDraft = React.useCallback(async () => {
     setLoading(true);
@@ -63,6 +87,10 @@ export function DraftDatasetUploaderWithReplace({
   function onDropFiles(files: FileList) {
     const file = files.item(0);
     if (!file) return;
+    if (!isValidDatasetWavFile(file)) {
+      toast.error("Dataset must be a .wav file.");
+      return;
+    }
 
     void (async () => {
       try {
@@ -107,29 +135,33 @@ export function DraftDatasetUploaderWithReplace({
             "dark:border-white/12 dark:bg-background/10 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
             "hover:border-black/12 hover:shadow-[0_18px_50px_rgba(2,8,23,0.10)]",
             "dark:hover:border-white/16 dark:hover:shadow-[0_22px_70px_rgba(0,0,0,0.40)]",
-            "cursor-pointer",
-            dragActive ? "ring-2 ring-primary/35" : "ring-0"
+            dragState === "invalid" ? "cursor-not-allowed" : "cursor-pointer",
+            dragState === "valid" ? "ring-2 ring-primary/35" : dragState === "invalid" ? "ring-2 ring-destructive/35" : "ring-0"
           )}
           onClick={onChooseFile}
           onDragEnter={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            setDragActive(true);
+            const state = draggedWavState(e.dataTransfer);
+            setDragState(state === "invalid" ? "invalid" : "valid");
           }}
           onDragOver={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            setDragActive(true);
+            const state = draggedWavState(e.dataTransfer);
+            const invalid = state === "invalid";
+            e.dataTransfer.dropEffect = invalid ? "none" : "copy";
+            setDragState(invalid ? "invalid" : "valid");
           }}
           onDragLeave={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            setDragActive(false);
+            setDragState("idle");
           }}
           onDrop={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            setDragActive(false);
+            setDragState("idle");
             onDropFiles(e.dataTransfer.files);
           }}
         >
@@ -162,6 +194,10 @@ export function DraftDatasetUploaderWithReplace({
             if (!f) return;
             void (async () => {
               try {
+                if (!isValidDatasetWavFile(f)) {
+                  toast.error("Dataset must be a .wav file.");
+                  return;
+                }
                 if (draft) {
                   toast.message("Replacing current file...");
                   await clearDraft();
