@@ -17,6 +17,15 @@ export type VoiceCloneCardData = {
 
 export function VoiceCloneCard({ voice }: { voice: VoiceCloneCardData }) {
   const [nonce, setNonce] = React.useState(() => Date.now());
+  const [meta, setMeta] = React.useState(() => ({
+    name: voice.name,
+    language: voice.language,
+    description: voice.description,
+  }));
+
+  React.useEffect(() => {
+    setMeta({ name: voice.name, language: voice.language, description: voice.description });
+  }, [voice.name, voice.language, voice.description]);
 
   return (
     <PremiumCard className="h-full min-h-[520px] p-5" contentClassName="flex h-full flex-col">
@@ -25,6 +34,10 @@ export function VoiceCloneCard({ voice }: { voice: VoiceCloneCardData }) {
         <div className="absolute right-2 top-2">
           <VoiceActionsMenu
             voiceId={voice.id}
+            initialName={meta.name}
+            initialLanguage={meta.language}
+            initialDescription={meta.description}
+            onVoiceUpdated={(next) => setMeta(next)}
             onCoverReplaced={() => {
               setNonce(Date.now());
             }}
@@ -34,17 +47,17 @@ export function VoiceCloneCard({ voice }: { voice: VoiceCloneCardData }) {
 
       <div className="mt-4">
         <div className="text-base font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
-          {voice.name}
+          {meta.name}
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">{voice.language || "Language"}</Badge>
+          <Badge variant="secondary">{meta.language || "Language"}</Badge>
           <Badge variant={voice.hasDataset ? "secondary" : "outline"}>
             {voice.hasDataset ? "recording ready" : "missing recording"}
           </Badge>
         </div>
 
         <div className="mt-3 line-clamp-3 min-h-[60px] text-sm text-muted-foreground">
-          {voice.description || "No notes"}
+          {meta.description || "No notes"}
         </div>
       </div>
 

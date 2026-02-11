@@ -3,8 +3,11 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ImagePlus, MoreHorizontal, Trash2 } from "lucide-react";
+import { ImagePlus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,15 +27,69 @@ import { ImageUploader, type ImageUploaderHandle } from "@/components/app/image-
 
 export function VoiceActionsMenu({
   voiceId,
+  initialName,
+  initialLanguage,
+  initialDescription,
+  onVoiceUpdated,
   onCoverReplaced,
 }: {
   voiceId: string;
+  initialName?: string;
+  initialLanguage?: string | null;
+  initialDescription?: string | null;
+  onVoiceUpdated?: (next: { name: string; language: string | null; description: string | null }) => void;
   onCoverReplaced?: () => void;
 }) {
   const router = useRouter();
   const uploaderRef = React.useRef<ImageUploaderHandle | null>(null);
+  const [editOpen, setEditOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
+  const [name, setName] = React.useState(initialName || "");
+  const [language, setLanguage] = React.useState(initialLanguage || "");
+  const [description, setDescription] = React.useState(initialDescription || "");
+
+  React.useEffect(() => {
+    setName(initialName || "");
+    setLanguage(initialLanguage || "");
+    setDescription(initialDescription || "");
+  }, [initialName, initialLanguage, initialDescription]);
+
+  const canEdit = typeof initialName === "string";
+
+  async function onSave() {
+    if (name.trim().length < 2) {
+      toast.error("Voice name must be at least 2 characters.");
+      return;
+    }
+    setSaving(true);
+    const res = await fetch(`/api/voices/${encodeURIComponent(voiceId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: name.trim(),
+        language: language.trim() ? language.trim() : null,
+        description: description.trim() ? description.trim() : null,
+      }),
+    });
+    const json = await res.json().catch(() => null);
+    setSaving(false);
+
+    if (!res.ok || !json?.ok) {
+      toast.error(json?.error?.message || "Could not update voice");
+      return;
+    }
+
+    onVoiceUpdated?.({
+      name: name.trim(),
+      language: language.trim() ? language.trim() : null,
+      description: description.trim() ? description.trim() : null,
+    });
+    toast.success("Voice updated");
+    setEditOpen(false);
+    router.refresh();
+  }
 
   async function onDelete() {
     setDeleting(true);
@@ -60,6 +117,17 @@ export function VoiceActionsMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
+          {canEdit ? (
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                setEditOpen(true);
+              }}
+            >
+              <Pencil className="h-4 w-4" />
+              Edit details
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem
             onSelect={(e) => {
               e.preventDefault();
@@ -82,6 +150,52 @@ export function VoiceActionsMenu({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit voice</DialogTitle>
+            <DialogDescription>Update voice name, language, and notes.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <div className="grid gap-2">
+              <Label htmlFor={`edit-name-${voiceId}`}>Voice name</Label>
+              <Input
+                id={`edit-name-${voiceId}`}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Voice name"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor={`edit-lang-${voiceId}`}>Language</Label>
+              <Input
+                id={`edit-lang-${voiceId}`}
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                placeholder="e.g., en"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor={`edit-notes-${voiceId}`}>Notes</Label>
+              <Textarea
+                id={`edit-notes-${voiceId}`}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Optional notes"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)} className="rounded-full">
+              Cancel
+            </Button>
+            <Button onClick={() => void onSave()} disabled={saving} className="rounded-full">
+              {saving ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ImageUploader
         ref={uploaderRef}
