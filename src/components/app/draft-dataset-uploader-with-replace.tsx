@@ -102,8 +102,9 @@ export function DraftDatasetUploaderWithReplace({
           className={cn(
             "group relative w-full overflow-hidden rounded-2xl border p-6 text-left transition-all",
             "min-h-[288px]",
-            "border-black/8 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-md",
-            "dark:border-white/12 dark:bg-background/25 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.10)]",
+            // Neutral glass frame (no colored background)
+            "border-black/10 bg-background/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-md",
+            "dark:border-white/12 dark:bg-background/10 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
             "hover:border-black/12 hover:shadow-[0_18px_50px_rgba(2,8,23,0.10)]",
             "dark:hover:border-white/16 dark:hover:shadow-[0_22px_70px_rgba(0,0,0,0.40)]",
             "cursor-pointer",
@@ -132,10 +133,8 @@ export function DraftDatasetUploaderWithReplace({
             onDropFiles(e.dataTransfer.files);
           }}
         >
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-600/16 via-transparent to-fuchsia-600/16 dark:from-cyan-600/24 dark:to-fuchsia-600/20" />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/55 via-white/0 to-white/0 opacity-65 dark:from-white/10" />
           <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/8 dark:ring-white/10" />
-          <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100 bg-[radial-gradient(65%_55%_at_50%_10%,rgba(255,255,255,0.55),transparent_55%)] dark:bg-[radial-gradient(65%_55%_at_50%_10%,rgba(255,255,255,0.14),transparent_55%)]" />
+          <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100 bg-gradient-to-b from-white/10 via-transparent to-transparent dark:from-white/6" />
 
           <div className="relative flex max-w-xl flex-col gap-2">
             <div className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
