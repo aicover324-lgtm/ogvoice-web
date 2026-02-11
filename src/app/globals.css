@@ -319,17 +319,18 @@
 @keyframes og-clone-wall-pulse {
   0%,
   100% {
-    opacity: 0.62;
-    border-color: rgba(34, 211, 238, 0.62);
-    box-shadow:
-      inset 0 0 0 1px rgba(34, 211, 238, 0.58),
-      0 0 6px rgba(34, 211, 238, 0.16);
-  }
-  50% {
     opacity: 1;
     border-color: rgba(6, 182, 212, 1);
     box-shadow:
       inset 0 0 0 1px rgba(6, 182, 212, 1),
-      0 0 34px rgba(6, 182, 212, 0.72);
+      0 0 32px rgba(6, 182, 212, 0.72);
+  }
+  45%,
+  55% {
+    opacity: 0;
+    border-color: rgba(6, 182, 212, 0);
+    box-shadow:
+      inset 0 0 0 1px rgba(6, 182, 212, 0),
+      0 0 0 rgba(6, 182, 212, 0);
   }
 }
