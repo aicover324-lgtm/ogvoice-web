@@ -17,6 +17,10 @@ type VoiceNamedKeyArgs = VoiceKeyArgs & {
   voiceName: string;
 };
 
+type VoiceCoverKeyArgs = VoiceNamedKeyArgs & {
+  extension: string;
+};
+
 const SAFE_KEY_PART_RE = /^[a-zA-Z0-9_-]+$/;
 
 function assertSafeKeyPart(value: string, label: string) {
@@ -55,6 +59,25 @@ export function canonicalVoiceAssetBaseName(voiceName: string) {
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
   return stem || "voice";
+}
+
+export function canonicalImageExtension(args: { fileName?: string | null; mimeType?: string | null }) {
+  const mime = (args.mimeType || "").toLowerCase();
+  if (mime === "image/jpeg") return "jpg";
+  if (mime === "image/png") return "png";
+  if (mime === "image/webp") return "webp";
+
+  const file = (args.fileName || "").toLowerCase();
+  if (file.endsWith(".jpg") || file.endsWith(".jpeg")) return "jpg";
+  if (file.endsWith(".png")) return "png";
+  if (file.endsWith(".webp")) return "webp";
+
+  return "webp";
+}
+
+export function voiceCoverImageKey(args: VoiceCoverKeyArgs) {
+  const ext = canonicalImageExtension({ fileName: `x.${args.extension}` });
+  return `u/${args.userId}/voices/${args.voiceProfileId}/covers/${canonicalVoiceAssetBaseName(args.voiceName)}.${ext}`;
 }
 
 // Dataset wav for a specific training job

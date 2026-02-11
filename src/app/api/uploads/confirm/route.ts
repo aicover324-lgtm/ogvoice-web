@@ -7,6 +7,7 @@ import { Prisma } from "@prisma/client";
 import { env } from "@/lib/env";
 import { assertSafeStorageKey, assertStorageKeyOwnedByUser } from "@/lib/storage/validate";
 import { deleteObjects, getObjectBytes, putObjectBytes } from "@/lib/storage/s3";
+import { canonicalImageExtension, canonicalVoiceAssetBaseName, voiceCoverImageKey } from "@/lib/storage/keys";
 import sharp from "sharp";
 
 const schema = z.object({
@@ -70,12 +71,14 @@ export async function POST(req: Request) {
   }
 
   let resolvedVoiceId: string | undefined = voiceProfileId;
+  let resolvedVoiceName: string | null = null;
   if (resolvedVoiceId) {
     const voice = await prisma.voiceProfile.findFirst({
       where: { id: resolvedVoiceId, userId: session.user.id, deletedAt: null },
-      select: { id: true },
+      select: { id: true, name: true },
     });
     if (!voice) return err("NOT_FOUND", "Voice profile not found", 404);
+    resolvedVoiceName = voice.name;
   }
 
   if (type === "dataset_audio") {
@@ -106,26 +109,35 @@ export async function POST(req: Request) {
     }
   }
 
-  // Image optimization pipeline: store optimized WEBP and delete original upload.
+  // Image optimization pipeline: store optimized image and delete original upload.
   if (type === "avatar_image" || type === "voice_cover_image") {
     try {
       const input = await getObjectBytes({ key: storageKey, maxBytes: env.UPLOAD_MAX_IMAGE_BYTES });
 
       const isAvatar = type === "avatar_image";
       const size = isAvatar ? 256 : 768;
-      const optimized = await sharp(input, { limitInputPixels: 40_000_000 })
-        .rotate()
-        .resize(size, size, { fit: "cover" })
-        .webp({ quality: 82 })
-        .toBuffer();
+      const ext = isAvatar ? "webp" : canonicalImageExtension({ fileName, mimeType });
+      const optimizedBase = sharp(input, { limitInputPixels: 40_000_000 }).rotate().resize(size, size, { fit: "cover" });
+      const optimized =
+        ext === "jpg"
+          ? await optimizedBase.jpeg({ quality: 86, mozjpeg: true }).toBuffer()
+          : ext === "png"
+            ? await optimizedBase.png({ compressionLevel: 9 }).toBuffer()
+            : await optimizedBase.webp({ quality: 82 }).toBuffer();
+      const outputMimeType = ext === "jpg" ? "image/jpeg" : ext === "png" ? "image/png" : "image/webp";
 
       const uuid = crypto.randomUUID();
       const destKey =
         type === "avatar_image"
           ? `u/${session.user.id}/avatars/${uuid}_avatar.webp`
           : resolvedVoiceId
-            ? `u/${session.user.id}/voices/${resolvedVoiceId}/covers/${uuid}_cover.webp`
-            : `u/${session.user.id}/drafts/covers/${uuid}_cover.webp`;
+            ? voiceCoverImageKey({
+                userId: session.user.id,
+                voiceProfileId: resolvedVoiceId,
+                voiceName: resolvedVoiceName || "voice",
+                extension: ext,
+              })
+            : `u/${session.user.id}/drafts/covers/${uuid}_cover.${ext}`;
 
       const previous = await prisma.uploadAsset.findMany({
         where: {
@@ -140,8 +152,8 @@ export async function POST(req: Request) {
       await putObjectBytes({
         key: destKey,
         bytes: optimized,
-        contentType: "image/webp",
-        cacheControl: "private, max-age=31536000, immutable",
+        contentType: isAvatar ? "image/webp" : outputMimeType,
+        cacheControl: isAvatar ? "private, max-age=31536000, immutable" : "private, no-cache",
       });
 
       // Create the new asset first so we never end up with "no avatar/cover" on partial failures.
@@ -150,9 +162,14 @@ export async function POST(req: Request) {
           userId: session.user.id,
           voiceProfileId: type === "voice_cover_image" ? (resolvedVoiceId ?? null) : null,
           type,
-          fileName: isAvatar ? "avatar.webp" : "cover.webp",
+          fileName:
+            isAvatar
+              ? "avatar.webp"
+              : resolvedVoiceId
+                ? `${canonicalVoiceAssetBaseName(resolvedVoiceName || "voice")}.${ext}`
+                : `cover.${ext}`,
           fileSize: optimized.length,
-          mimeType: "image/webp",
+          mimeType: isAvatar ? "image/webp" : outputMimeType,
           storageKey: destKey,
         },
         select: { id: true },
@@ -175,7 +192,10 @@ export async function POST(req: Request) {
 
       // Best-effort cleanup: delete the original upload + any previous avatar/cover objects and rows.
       try {
-        await deleteObjects([storageKey, ...prevKeys]);
+        const uniq = Array.from(new Set([storageKey, ...prevKeys])).filter((key) => key && key !== destKey);
+        if (uniq.length > 0) {
+          await deleteObjects(uniq);
+        }
       } catch {
         // Ignore cleanup errors to avoid failing a successful upload.
       }

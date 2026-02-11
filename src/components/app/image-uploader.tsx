@@ -276,7 +276,7 @@ export const ImageUploader = React.forwardRef<ImageUploaderHandle, {
       {progress > 0 ? <Progress value={progress} /> : null}
       {footerHint === null ? null : (
         <div className="text-xs text-muted-foreground">
-          {footerHint || "Optimized and stored as WEBP."}
+          {footerHint || "Optimized and stored securely."}
         </div>
       )}
     </div>

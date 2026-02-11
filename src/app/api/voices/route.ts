@@ -4,7 +4,12 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { err, ok } from "@/lib/api-response";
 import { copyObject, deleteObjects } from "@/lib/storage/s3";
-import { canonicalVoiceAssetBaseName, voiceDatasetWavKey } from "@/lib/storage/keys";
+import {
+  canonicalImageExtension,
+  canonicalVoiceAssetBaseName,
+  voiceCoverImageKey,
+  voiceDatasetWavKey,
+} from "@/lib/storage/keys";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -40,6 +45,8 @@ export async function POST(req: Request) {
   let voice: { id: string };
   let draftDatasetKeyToDelete: string | null = null;
   let copiedDatasetKeyToRollback: string | null = null;
+  let draftCoverKeyToDelete: string | null = null;
+  let copiedCoverKeyToRollback: string | null = null;
   try {
     voice = await prisma.$transaction(async (db) => {
       const created = await db.voiceProfile.create({
@@ -52,6 +59,9 @@ export async function POST(req: Request) {
       });
 
       let coverId: string | null = null;
+      let coverStorageKey: string | null = null;
+      let coverFileName: string | null = null;
+      let coverMimeType: string | null = null;
       if (parsed.data.coverAssetId) {
         const cover = await db.uploadAsset.findFirst({
           where: {
@@ -60,12 +70,15 @@ export async function POST(req: Request) {
             type: "voice_cover_image",
             voiceProfileId: null,
           },
-          select: { id: true },
+          select: { id: true, storageKey: true, fileName: true, mimeType: true },
         });
         if (!cover) {
           throw new Error("COVER_ASSET_INVALID");
         }
         coverId = cover.id;
+        coverStorageKey = cover.storageKey;
+        coverFileName = cover.fileName;
+        coverMimeType = cover.mimeType;
       }
 
       if (parsed.data.datasetAssetId) {
@@ -109,18 +122,41 @@ export async function POST(req: Request) {
       }
 
       if (coverId) {
+        const coverExt = canonicalImageExtension({ fileName: coverFileName, mimeType: coverMimeType });
+        const coverStorageNamedKey = voiceCoverImageKey({
+          userId: session.user.id,
+          voiceProfileId: created.id,
+          voiceName: parsed.data.name,
+          extension: coverExt,
+        });
+        const coverFileNamed = `${canonicalVoiceAssetBaseName(parsed.data.name)}.${coverExt}`;
+
+        if (coverStorageKey && coverStorageKey !== coverStorageNamedKey) {
+          await copyObject({ fromKey: coverStorageKey, toKey: coverStorageNamedKey });
+          copiedCoverKeyToRollback = coverStorageNamedKey;
+          draftCoverKeyToDelete = coverStorageKey;
+        }
+
         await db.uploadAsset.update({
           where: { id: coverId },
-          data: { voiceProfileId: created.id },
+          data: {
+            voiceProfileId: created.id,
+            storageKey: coverStorageNamedKey,
+            fileName: coverFileNamed,
+          },
         });
       }
       return created;
     });
     copiedDatasetKeyToRollback = null;
+    copiedCoverKeyToRollback = null;
   } catch (e) {
-    if (copiedDatasetKeyToRollback) {
+    const rollbackKeys: string[] = [];
+    if (copiedDatasetKeyToRollback) rollbackKeys.push(copiedDatasetKeyToRollback);
+    if (copiedCoverKeyToRollback) rollbackKeys.push(copiedCoverKeyToRollback);
+    if (rollbackKeys.length > 0) {
       try {
-        await deleteObjects([copiedDatasetKeyToRollback]);
+        await deleteObjects(rollbackKeys);
       } catch {
         // Ignore rollback cleanup errors.
       }
@@ -134,11 +170,14 @@ export async function POST(req: Request) {
     return err("INTERNAL", "Could not create voice.", 500);
   }
 
-  if (draftDatasetKeyToDelete) {
+  const postCommitCleanupKeys: string[] = [];
+  if (draftDatasetKeyToDelete) postCommitCleanupKeys.push(draftDatasetKeyToDelete);
+  if (draftCoverKeyToDelete) postCommitCleanupKeys.push(draftCoverKeyToDelete);
+  if (postCommitCleanupKeys.length > 0) {
     try {
-      await deleteObjects([draftDatasetKeyToDelete]);
+      await deleteObjects(postCommitCleanupKeys);
     } catch {
-      // Ignore cleanup errors. The old draft object is harmless.
+      // Ignore cleanup errors. Old draft objects are harmless.
     }
   }
 
