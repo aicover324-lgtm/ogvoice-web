@@ -22,8 +22,11 @@ const schema = z.object({
 export default function NewVoicePage() {
   const router = useRouter();
   const [creating, setCreating] = React.useState(false);
+  const [cleaning, setCleaning] = React.useState(false);
   const [datasetAssetId, setDatasetAssetId] = React.useState<string | null>(null);
   const [coverAssetId, setCoverAssetId] = React.useState<string | null>(null);
+  const [resetKey, setResetKey] = React.useState(0);
+  const formRef = React.useRef<HTMLFormElement | null>(null);
 
   React.useEffect(() => {
     // If user refreshes the page, we can still attach the last drafted cover.
@@ -76,18 +79,54 @@ export default function NewVoicePage() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
-          New Voice Profile
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Upload your singing voice recording.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
+            New Voice Profile
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Upload your singing voice recording.
+          </p>
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          className="rounded-full"
+          disabled={cleaning}
+          onClick={() => {
+            void (async () => {
+              setCleaning(true);
+              try {
+                const [a, b] = await Promise.all([
+                  fetch("/api/uploads/draft", { method: "DELETE" }),
+                  fetch("/api/uploads/draft-cover", { method: "DELETE" }),
+                ]);
+                const aj = await a.json().catch(() => null);
+                const bj = await b.json().catch(() => null);
+                if (!a.ok || !aj?.ok) throw new Error(aj?.error?.message || "Could not clean voice file");
+                if (!b.ok || !bj?.ok) throw new Error(bj?.error?.message || "Could not clean cover image");
+                setDatasetAssetId(null);
+                setCoverAssetId(null);
+                setResetKey((k) => k + 1);
+                formRef.current?.reset();
+                toast.success("Cleaned. Start fresh.");
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Clean failed");
+              } finally {
+                setCleaning(false);
+              }
+            })();
+          }}
+        >
+          {cleaning ? "Cleaning..." : "Clean"}
+        </Button>
       </div>
 
-      <form onSubmit={createVoice} className="mt-8">
+      <form ref={formRef} onSubmit={createVoice} className="mt-8">
         <div className="grid gap-4 lg:grid-cols-3">
           <DraftDatasetUploaderWithReplace
+            key={`voice-${resetKey}`}
             title="1. Singing Voice"
             onDraftChange={(asset) => {
               setDatasetAssetId(asset?.id ?? null);
@@ -104,6 +143,7 @@ export default function NewVoicePage() {
               </div>
               <div className="mt-4 grid gap-3">
                 <ImageUploader
+                  key={`cover-${resetKey}`}
                   type="voice_cover_image"
                   trigger="frame"
                   preview={{

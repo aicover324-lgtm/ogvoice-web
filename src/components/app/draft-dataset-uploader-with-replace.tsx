@@ -3,17 +3,8 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { Repeat2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { DatasetUploader, type DatasetUploaderHandle } from "@/components/app/dataset-uploader";
 import { cn } from "@/lib/utils";
 
@@ -34,12 +25,10 @@ export function DraftDatasetUploaderWithReplace({
   className?: string;
 }) {
   const uploaderRef = React.useRef<DatasetUploaderHandle | null>(null);
+  const pickerRef = React.useRef<HTMLInputElement | null>(null);
   const [draft, setDraft] = React.useState<DraftAsset | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [open, setOpen] = React.useState(false);
-  const [replacing, setReplacing] = React.useState(false);
   const [dragActive, setDragActive] = React.useState(false);
-  const [pendingFile, setPendingFile] = React.useState<File | null>(null);
 
   const loadDraft = React.useCallback(async () => {
     setLoading(true);
@@ -56,50 +45,36 @@ export function DraftDatasetUploaderWithReplace({
     loadDraft();
   }, [loadDraft]);
 
-  async function replace() {
-    if (!draft?.id) return;
-    setReplacing(true);
+  async function clearDraft() {
     // Delete *all* draft dataset assets for safety (covers older duplicates).
     const res = await fetch(`/api/uploads/draft`, { method: "DELETE" });
     const json = await res.json().catch(() => null);
-    setReplacing(false);
     if (!res.ok || !json?.ok) {
-      toast.error(json?.error?.message || "Could not replace file");
-      return;
+      throw new Error(json?.error?.message || "Could not clear current file");
     }
     setDraft(null);
     onDraftChange?.(null);
-    setOpen(false);
-
-    if (pendingFile) {
-      const file = pendingFile;
-      setPendingFile(null);
-      toast.success("Replacing... uploading new file");
-      await uploaderRef.current?.uploadFiles([file]);
-      return;
-    }
-
-    toast.success("Pick a new dataset file");
-    setTimeout(() => uploaderRef.current?.openPicker(), 60);
   }
 
   function onChooseFile() {
-    if (!draft) {
-      uploaderRef.current?.openPicker();
-      return;
-    }
-    setOpen(true);
+    pickerRef.current?.click();
   }
 
   function onDropFiles(files: FileList) {
     const file = files.item(0);
     if (!file) return;
-    if (!draft) {
-      void uploaderRef.current?.uploadFiles([file]);
-      return;
-    }
-    setPendingFile(file);
-    setOpen(true);
+
+    void (async () => {
+      try {
+        if (draft) {
+          toast.message("Replacing current file...");
+          await clearDraft();
+        }
+        await uploaderRef.current?.uploadFiles([file]);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Could not upload file");
+      }
+    })();
   }
 
   const locked = !!draft;
@@ -185,24 +160,30 @@ export function DraftDatasetUploaderWithReplace({
           </div>
         </button>
 
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Replace voice file?</DialogTitle>
-              <DialogDescription>
-                This deletes the current file, then uploads the new one.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" className="rounded-full" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" className="rounded-full" onClick={replace} disabled={replacing}>
-                {replacing ? "Replacing..." : "Replace"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <input
+          ref={pickerRef}
+          type="file"
+          accept="audio/wav,audio/x-wav,.wav"
+          multiple={false}
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (!f) return;
+            void (async () => {
+              try {
+                if (draft) {
+                  toast.message("Replacing current file...");
+                  await clearDraft();
+                }
+                await uploaderRef.current?.uploadFiles([f]);
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : "Could not upload file");
+              } finally {
+                if (pickerRef.current) pickerRef.current.value = "";
+              }
+            })();
+          }}
+        />
 
         <DatasetUploader
           ref={uploaderRef}
