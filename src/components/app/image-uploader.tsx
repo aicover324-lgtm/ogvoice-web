@@ -30,6 +30,8 @@ export const ImageUploader = React.forwardRef<ImageUploaderHandle, {
   buttonLabel?: string;
   preview?: PreviewConfig;
   trigger?: "button" | "frame";
+  frameHint?: string | null;
+  footerHint?: string | null;
   headless?: boolean;
 }>(function ImageUploader(
   {
@@ -40,6 +42,8 @@ export const ImageUploader = React.forwardRef<ImageUploaderHandle, {
     buttonLabel,
     preview,
     trigger,
+    frameHint,
+    footerHint,
     headless,
   },
   ref
@@ -236,7 +240,11 @@ export const ImageUploader = React.forwardRef<ImageUploaderHandle, {
           </button>
 
           {effectiveTrigger === "frame" ? (
-            <div className="text-xs text-muted-foreground">Click the square to upload. Replaces previous image.</div>
+            frameHint === null ? null : (
+              <div className="text-xs text-muted-foreground">
+                {frameHint || "Click the square to upload. Replaces previous image."}
+              </div>
+            )
           ) : (
             <div className="min-w-0">
               <div className="text-sm font-medium">
@@ -266,7 +274,11 @@ export const ImageUploader = React.forwardRef<ImageUploaderHandle, {
         </Button>
       ) : null}
       {progress > 0 ? <Progress value={progress} /> : null}
-      <div className="text-xs text-muted-foreground">Optimized and stored as WEBP.</div>
+      {footerHint === null ? null : (
+        <div className="text-xs text-muted-foreground">
+          {footerHint || "Optimized and stored as WEBP."}
+        </div>
+      )}
     </div>
   );
 });

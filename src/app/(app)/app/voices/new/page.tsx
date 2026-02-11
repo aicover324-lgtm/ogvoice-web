@@ -146,6 +146,8 @@ export default function NewVoicePage() {
                   key={`cover-${resetKey}`}
                   type="voice_cover_image"
                   trigger="frame"
+                  frameHint={null}
+                  footerHint={null}
                   preview={{
                     src: "/api/uploads/draft-cover/image",
                     alt: "Cover",
@@ -155,9 +157,7 @@ export default function NewVoicePage() {
                   }}
                   onAssetCreated={(asset) => setCoverAssetId(asset.id)}
                 />
-                <div className="text-xs text-muted-foreground">
-                  Click the cover to upload. You can replace it later from the voice card menu.
-                </div>
+                <div className="text-xs text-muted-foreground">Upload a cover image</div>
               </div>
             </div>
           </Card>
