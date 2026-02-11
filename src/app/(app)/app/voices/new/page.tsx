@@ -27,6 +27,7 @@ export default function NewVoicePage() {
   const [coverAssetId, setCoverAssetId] = React.useState<string | null>(null);
   const [resetKey, setResetKey] = React.useState(0);
   const formRef = React.useRef<HTMLFormElement | null>(null);
+  const [nameValue, setNameValue] = React.useState("");
 
   React.useEffect(() => {
     // If user refreshes the page, we can still attach the last drafted cover.
@@ -110,6 +111,7 @@ export default function NewVoicePage() {
                 setCoverAssetId(null);
                 setResetKey((k) => k + 1);
                 formRef.current?.reset();
+                setNameValue("");
                 toast.success("Cleaned. Start fresh.");
               } catch (e) {
                 toast.error(e instanceof Error ? e.message : "Clean failed");
@@ -166,7 +168,13 @@ export default function NewVoicePage() {
               <div className="mt-4 grid gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="name">Name</Label>
-                  <Input id="name" name="name" placeholder="e.g., Studio Vocal - English" required />
+                  <Input
+                    id="name"
+                    name="name"
+                    placeholder="e.g., Studio Vocal - English"
+                    required
+                    onInput={(e) => setNameValue((e.target as HTMLInputElement).value)}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="language">Language (optional)</Label>
@@ -181,21 +189,30 @@ export default function NewVoicePage() {
           </PremiumCard>
         </div>
 
-        <div className="mt-8 flex flex-col items-center gap-2">
-          <div className="relative">
-            <div className="pointer-events-none absolute -inset-3 rounded-full bg-gradient-to-r from-cyan-500/25 to-fuchsia-500/22 blur-xl dark:from-cyan-500/30 dark:to-fuchsia-500/28" />
-            <Button
-              type="submit"
-              disabled={creating || !datasetAssetId}
-              className="relative h-11 rounded-full px-7 text-sm font-semibold shadow-lg shadow-black/10 dark:shadow-black/30 bg-gradient-to-r from-cyan-600 to-fuchsia-600 hover:from-cyan-500 hover:to-fuchsia-500 disabled:opacity-60"
-            >
-              {creating ? "Creating..." : "Create Voice"}
-            </Button>
-          </div>
-          {!datasetAssetId ? (
-            <div className="text-xs text-muted-foreground">Upload your singing voice to enable “Create Voice”.</div>
-          ) : null}
-        </div>
+        {(() => {
+          const ready = !!datasetAssetId && nameValue.trim().length >= 2;
+          const canSubmit = ready && !creating;
+          return (
+            <div className="mt-8 flex justify-center">
+              <div className="relative">
+                {canSubmit ? (
+                  <div className="pointer-events-none absolute -inset-3 rounded-full bg-gradient-to-r from-cyan-500/25 to-fuchsia-500/22 blur-xl dark:from-cyan-500/30 dark:to-fuchsia-500/28" />
+                ) : null}
+                <Button
+                  type="submit"
+                  disabled={!canSubmit}
+                  className={
+                    canSubmit
+                      ? "relative h-11 rounded-full px-7 text-sm font-semibold shadow-lg shadow-black/10 dark:shadow-black/30 bg-gradient-to-r from-cyan-600 to-fuchsia-600 hover:from-cyan-500 hover:to-fuchsia-500"
+                      : "relative h-11 rounded-full px-7 text-sm font-semibold border border-black/10 bg-muted text-muted-foreground shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-white/60"
+                  }
+                >
+                  {creating ? "Creating..." : "Create Voice"}
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
       </form>
     </main>
   );
