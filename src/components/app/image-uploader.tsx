@@ -286,10 +286,18 @@ export const ImageUploader = React.forwardRef<ImageUploaderHandle, {
               </div>
             )}
 
-            {effectiveTrigger === "frame" && !busy ? (
+            {effectiveTrigger === "frame" && !busy && !frameBlocked ? (
               <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/0 opacity-0 transition-opacity group-hover:opacity-100">
                 <div className="rounded-full bg-black/55 px-3 py-1.5 text-xs font-medium text-white">
                   {previewSrc && previewOk ? "Change" : "Upload"}
+                </div>
+              </div>
+            ) : null}
+
+            {effectiveTrigger === "frame" && frameBlocked ? (
+              <div className="pointer-events-none absolute inset-0 grid place-items-center bg-destructive/15">
+                <div className="rounded-full border border-destructive/40 bg-background/90 px-3 py-1.5 text-xs font-medium text-destructive">
+                  Only jpg/png/webp allowed
                 </div>
               </div>
             ) : null}
@@ -304,7 +312,9 @@ export const ImageUploader = React.forwardRef<ImageUploaderHandle, {
           {effectiveTrigger === "frame" ? (
             frameHint === null ? null : (
               <div className="text-xs text-muted-foreground">
-                {frameHint || "Click the square to upload. Replaces previous image."}
+                {frameBlocked
+                  ? "Invalid file type. Drop only jpg, png, or webp images."
+                  : frameHint || "Click the square to upload. Replaces previous image."}
               </div>
             )
           ) : (
