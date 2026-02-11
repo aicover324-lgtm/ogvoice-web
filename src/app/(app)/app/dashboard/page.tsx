@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { PremiumCard } from "@/components/app/premium-card";
-import { ArrowRight } from "lucide-react";
 
 export default async function DashboardPage() {
   return (
@@ -100,13 +99,12 @@ export default async function DashboardPage() {
             className="group relative inline-flex h-12 items-center justify-center pl-7 pr-6 text-sm font-semibold tracking-tight text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-r from-cyan-600 to-fuchsia-600 shadow-[0_18px_60px_rgba(2,8,23,0.22)]" />
-            <span className="pointer-events-none absolute -right-4 top-1/2 h-10 w-10 -translate-y-1/2 bg-gradient-to-r from-cyan-600 to-fuchsia-600 shadow-[0_18px_60px_rgba(2,8,23,0.22)] [clip-path:polygon(0_0,100%_50%,0_100%,18%_50%)]" />
+            <span className="pointer-events-none absolute -right-4 top-1/2 h-10 w-10 -translate-y-1/2 bg-gradient-to-r from-cyan-600 to-fuchsia-600 shadow-[0_18px_60px_rgba(2,8,23,0.22)] transition-transform duration-200 group-hover:translate-x-1 [clip-path:polygon(0_0,100%_50%,0_100%,18%_50%)]" />
             <span className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-white/15" />
             <span className="pointer-events-none absolute inset-0 rounded-full opacity-0 transition-opacity duration-200 group-hover:opacity-100 bg-[radial-gradient(60%_70%_at_30%_20%,rgba(255,255,255,0.26),transparent_55%)]" />
 
             <span className="relative z-10 inline-flex items-center gap-2">
               Start
-              <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
             </span>
           </Link>
         </div>
