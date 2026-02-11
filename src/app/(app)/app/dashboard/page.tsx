@@ -1,13 +1,22 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { PremiumCard } from "@/components/app/premium-card";
 
 export default async function DashboardPage() {
   return (
     <main className="og-app-main relative">
-      <PageHeader title="Create Voice" description="Clone your AI singing voice in 3 simple steps." />
+      <PageHeader
+        title="Create Voice"
+        description="Clone your AI singing voice in 3 simple steps."
+        actions={
+          <Button asChild variant="outline" className="rounded-full">
+            <Link href="/">Go to landing</Link>
+          </Button>
+        }
+      />
 
       <Card className="relative mt-6 overflow-hidden border border-black/5 bg-white/70 p-0 shadow-[0_18px_60px_rgba(2,8,23,0.10)] backdrop-blur-md dark:border-white/10 dark:bg-slate-950/95 dark:shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
         <div className="relative aspect-[21/9] w-full">
