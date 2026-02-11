@@ -7,14 +7,34 @@ import { BillingPortalButton } from "@/components/app/billing-portal-button";
 import { ImageUploader } from "@/components/app/image-uploader";
 import { PageHeader } from "@/components/ui/page-header";
 
+function logSettingsQueryError(queryName: string, error: unknown) {
+  console.error(`[settings] ${queryName} query failed`, error);
+}
+
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions);
   const userId = session!.user.id;
 
-  const [user, sub] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true, createdAt: true } }),
-    prisma.subscription.findUnique({ where: { userId } }),
+  const [user, sub, avatarAsset] = await Promise.all([
+    prisma.user
+      .findUnique({ where: { id: userId }, select: { email: true, name: true, createdAt: true } })
+      .catch((error) => {
+        logSettingsQueryError("user", error);
+        return null;
+      }),
+    prisma.subscription.findFirst({ where: { userId } }).catch((error) => {
+      logSettingsQueryError("subscription", error);
+      return null;
+    }),
+    prisma.uploadAsset
+      .findFirst({ where: { userId, type: "avatar_image" }, orderBy: { createdAt: "desc" }, select: { id: true } })
+      .catch((error) => {
+        logSettingsQueryError("avatar_asset", error);
+        return null;
+      }),
   ]);
+
+  const avatarSrc = avatarAsset ? "/api/users/avatar" : "";
 
   return (
     <main className="og-app-main">
@@ -33,7 +53,7 @@ export default async function SettingsPage() {
             <div className="mt-2">
               <ImageUploader
                 type="avatar_image"
-                preview={{ src: "/api/users/avatar", alt: "Avatar", variant: "avatar", size: 56 }}
+                preview={{ src: avatarSrc, alt: "Avatar", variant: "avatar", size: 56 }}
                 onComplete={() => {
                   /* user-menu uses /api/users/avatar */
                 }}
