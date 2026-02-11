@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -37,7 +38,11 @@ export function GenerateForm({
   const [searchFeatureRatio, setSearchFeatureRatio] = React.useState(0.75);
   const [jobId, setJobId] = React.useState<string | null>(null);
   const [job, setJob] = React.useState<GenJob | null>(null);
+  const [outputUrl, setOutputUrl] = React.useState<string | null>(null);
+  const [outputFileName, setOutputFileName] = React.useState<string | null>(null);
+  const [loadingOutput, setLoadingOutput] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+  const lastOutputAssetIdRef = React.useRef<string | null>(null);
 
   async function start() {
     if (!voiceProfileId) {
@@ -50,6 +55,9 @@ export function GenerateForm({
     }
 
     setLoading(true);
+    setOutputUrl(null);
+    setOutputFileName(null);
+    lastOutputAssetIdRef.current = null;
     const res = await fetch("/api/generate/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -87,6 +95,32 @@ export function GenerateForm({
       clearInterval(t);
     };
   }, [jobId]);
+
+  const fetchOutputUrl = React.useCallback(async (assetId: string) => {
+    setLoadingOutput(true);
+    try {
+      const res = await fetch(`/api/assets/${encodeURIComponent(assetId)}?json=1`, { cache: "no-store" });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error?.message || "Could not load converted audio.");
+      }
+      const data = json.data as { url: string; fileName?: string };
+      setOutputUrl(data.url);
+      setOutputFileName(data.fileName || "converted.wav");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not load converted audio.");
+    } finally {
+      setLoadingOutput(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const outputAssetId = job?.outputAssetId || null;
+    if (!outputAssetId || job?.status !== "succeeded") return;
+    if (lastOutputAssetIdRef.current === outputAssetId && outputUrl) return;
+    lastOutputAssetIdRef.current = outputAssetId;
+    void fetchOutputUrl(outputAssetId);
+  }, [fetchOutputUrl, job?.outputAssetId, job?.status, outputUrl]);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
@@ -194,6 +228,44 @@ export function GenerateForm({
               <div className="text-muted-foreground">Start conversion to see progress here.</div>
             )}
           </div>
+
+          {job?.status === "succeeded" ? (
+            <div className="mt-4 grid gap-3 rounded-xl border border-black/10 bg-background/40 p-3 dark:border-white/10">
+              <div className="text-xs text-muted-foreground">Converted Audio</div>
+              <audio
+                controls
+                preload="none"
+                src={outputUrl || undefined}
+                className="w-full"
+              >
+                <track kind="captions" srcLang="en" label="captions" src="data:text/vtt,WEBVTT" />
+              </audio>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-full cursor-pointer"
+                  disabled={!job.outputAssetId || loadingOutput}
+                  onClick={() => {
+                    if (!job.outputAssetId) return;
+                    void fetchOutputUrl(job.outputAssetId);
+                  }}
+                >
+                  {loadingOutput ? "Refreshing..." : "Refresh Player Link"}
+                </Button>
+                <Button
+                  asChild
+                  className="rounded-full cursor-pointer"
+                  disabled={!outputUrl}
+                >
+                  <Link href={outputUrl || "#"} target="_blank">
+                    Download Audio
+                  </Link>
+                </Button>
+                {outputFileName ? <span className="text-xs text-muted-foreground">{outputFileName}</span> : null}
+              </div>
+            </div>
+          ) : null}
         </div>
       </Card>
     </div>
