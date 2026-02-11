@@ -95,7 +95,7 @@ export default function NewVoicePage() {
           />
 
           <Card className="relative overflow-hidden rounded-2xl border border-black/5 bg-white/75 p-6 shadow-[0_12px_32px_rgba(2,8,23,0.10)] backdrop-blur-md dark:border-white/10 dark:bg-background/35 dark:shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_60%_at_10%_0%,rgba(0,150,255,0.07),transparent_55%),radial-gradient(70%_60%_at_90%_0%,rgba(120,140,255,0.06),transparent_55%)] dark:bg-[radial-gradient(80%_60%_at_10%_0%,rgba(0,180,255,0.16),transparent_55%),radial-gradient(70%_60%_at_90%_0%,rgba(160,120,255,0.12),transparent_55%)]" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_60%_at_10%_0%,rgba(6,182,212,0.10),transparent_55%),radial-gradient(70%_60%_at_90%_0%,rgba(217,70,239,0.08),transparent_55%)] dark:bg-[radial-gradient(80%_60%_at_10%_0%,rgba(6,182,212,0.18),transparent_55%),radial-gradient(70%_60%_at_90%_0%,rgba(217,70,239,0.14),transparent_55%)]" />
             <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/7 dark:ring-white/10" />
             <div className="relative">
               <div className="flex items-center justify-between">
@@ -123,7 +123,7 @@ export default function NewVoicePage() {
           </Card>
 
           <Card className="relative overflow-hidden rounded-2xl border border-black/5 bg-white/75 p-6 shadow-[0_12px_32px_rgba(2,8,23,0.10)] backdrop-blur-md dark:border-white/10 dark:bg-background/35 dark:shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_60%_at_10%_0%,rgba(0,150,255,0.08),transparent_55%),radial-gradient(70%_60%_at_90%_0%,rgba(255,60,210,0.06),transparent_55%)] dark:bg-[radial-gradient(80%_60%_at_10%_0%,rgba(0,210,255,0.16),transparent_55%),radial-gradient(70%_60%_at_90%_0%,rgba(255,60,210,0.12),transparent_55%)]" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_60%_at_10%_0%,rgba(6,182,212,0.10),transparent_55%),radial-gradient(70%_60%_at_90%_0%,rgba(217,70,239,0.08),transparent_55%)] dark:bg-[radial-gradient(80%_60%_at_10%_0%,rgba(6,182,212,0.18),transparent_55%),radial-gradient(70%_60%_at_90%_0%,rgba(217,70,239,0.14),transparent_55%)]" />
             <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/7 dark:ring-white/10" />
             <div className="relative">
               <div className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>3. Voice Details</div>

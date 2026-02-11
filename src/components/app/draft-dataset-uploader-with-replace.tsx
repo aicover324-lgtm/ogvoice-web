@@ -113,7 +113,7 @@ export function DraftDatasetUploaderWithReplace({
         className
       )}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_60%_at_10%_0%,rgba(0,150,255,0.08),transparent_55%),radial-gradient(70%_60%_at_90%_0%,rgba(255,60,210,0.06),transparent_55%)] dark:bg-[radial-gradient(80%_60%_at_10%_0%,rgba(0,210,255,0.16),transparent_55%),radial-gradient(70%_60%_at_90%_0%,rgba(255,60,210,0.12),transparent_55%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_60%_at_10%_0%,rgba(6,182,212,0.10),transparent_55%),radial-gradient(70%_60%_at_90%_0%,rgba(217,70,239,0.08),transparent_55%)] dark:bg-[radial-gradient(80%_60%_at_10%_0%,rgba(6,182,212,0.18),transparent_55%),radial-gradient(70%_60%_at_90%_0%,rgba(217,70,239,0.14),transparent_55%)]" />
       <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/7 dark:ring-white/10" />
       <div className="flex items-center justify-between">
         <div className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>{heading}</div>
@@ -165,7 +165,7 @@ export function DraftDatasetUploaderWithReplace({
             onDropFiles(e.dataTransfer.files);
           }}
         >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(75%_60%_at_15%_0%,rgba(0,150,255,0.10),transparent_55%),radial-gradient(70%_60%_at_90%_0%,rgba(255,60,210,0.08),transparent_55%)] dark:bg-[radial-gradient(75%_60%_at_15%_0%,rgba(0,210,255,0.16),transparent_55%),radial-gradient(70%_60%_at_90%_0%,rgba(255,60,210,0.12),transparent_55%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(75%_60%_at_15%_0%,rgba(6,182,212,0.12),transparent_55%),radial-gradient(70%_60%_at_90%_0%,rgba(217,70,239,0.10),transparent_55%)] dark:bg-[radial-gradient(75%_60%_at_15%_0%,rgba(6,182,212,0.18),transparent_55%),radial-gradient(70%_60%_at_90%_0%,rgba(217,70,239,0.14),transparent_55%)]" />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/55 via-white/0 to-white/0 opacity-65 dark:from-white/10" />
           <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/8 dark:ring-white/10" />
           <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100 bg-[radial-gradient(65%_55%_at_50%_10%,rgba(255,255,255,0.55),transparent_55%)] dark:bg-[radial-gradient(65%_55%_at_50%_10%,rgba(255,255,255,0.14),transparent_55%)]" />
