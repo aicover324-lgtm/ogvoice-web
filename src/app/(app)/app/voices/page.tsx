@@ -12,6 +12,16 @@ export default async function VoicesPage() {
     orderBy: { createdAt: "desc" },
     include: {
       assets: { where: { type: "dataset_audio" }, select: { id: true }, take: 1 },
+      trainingJobs: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: {
+          id: true,
+          status: true,
+          artifactKey: true,
+          errorMessage: true,
+        },
+      },
     },
   });
 
@@ -36,6 +46,14 @@ export default async function VoicesPage() {
                 language: v.language,
                 description: v.description,
                 hasDataset: v.assets.length > 0,
+                latestTrainingJob: v.trainingJobs[0]
+                  ? {
+                      id: v.trainingJobs[0].id,
+                      status: v.trainingJobs[0].status,
+                      artifactKey: v.trainingJobs[0].artifactKey,
+                      errorMessage: v.trainingJobs[0].errorMessage,
+                    }
+                  : null,
               }}
             />
           ))

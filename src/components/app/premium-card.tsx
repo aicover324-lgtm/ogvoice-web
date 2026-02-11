@@ -6,9 +6,13 @@ export function PremiumCard({
   className,
   children,
   contentClassName,
+  ringClassName,
+  overlay,
 }: {
   className?: string;
   contentClassName?: string;
+  ringClassName?: string;
+  overlay?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -22,7 +26,13 @@ export function PremiumCard({
       {/* Neutral glass layers (no colored gradients) */}
       <div className="pointer-events-none absolute inset-0 opacity-[0.55] bg-[radial-gradient(circle_at_1px_1px,rgba(0,0,0,0.07)_1px,transparent_0)] bg-[size:16px_16px] dark:opacity-[0.22] dark:bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.12)_1px,transparent_0)]" />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/45 via-white/0 to-transparent opacity-70 dark:from-white/10" />
-      <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/8 dark:ring-white/10" />
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/8 transition-colors duration-300 dark:ring-white/10",
+          ringClassName
+        )}
+      />
+      {overlay}
       <div className={cn("relative z-10", contentClassName)}>{children}</div>
     </Card>
   );
