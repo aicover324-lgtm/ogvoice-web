@@ -13,8 +13,6 @@ import { Badge } from "@/components/ui/badge";
 type Voice = { id: string; name: string; language: string | null };
 type GenJob = { id: string; status: "queued" | "running" | "succeeded" | "failed"; progress: number };
 
-const NO_DEMO = "__none__";
-
 export function GenerateForm({
   voices,
   initialVoiceProfileId,
@@ -29,18 +27,19 @@ export function GenerateForm({
 
   const [voiceProfileId, setVoiceProfileId] = React.useState<string>(defaultVoiceId);
   const [inputAssetId, setInputAssetId] = React.useState<string | null>(null);
-  const [demoTrackId, setDemoTrackId] = React.useState<string>(NO_DEMO);
+  const [pitch, setPitch] = React.useState(0);
+  const [searchFeatureRatio, setSearchFeatureRatio] = React.useState(0.75);
   const [jobId, setJobId] = React.useState<string | null>(null);
   const [job, setJob] = React.useState<GenJob | null>(null);
   const [loading, setLoading] = React.useState(false);
 
   async function start() {
     if (!voiceProfileId) {
-      toast.error("Select a voice");
+      toast.error("Select a cloned voice first.");
       return;
     }
-    if (!inputAssetId && demoTrackId === NO_DEMO) {
-      toast.error("Upload an input audio file or choose a demo track.");
+    if (!inputAssetId) {
+      toast.error("Upload a singing record first.");
       return;
     }
 
@@ -50,18 +49,19 @@ export function GenerateForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         voiceProfileId,
-        inputAssetId: inputAssetId || undefined,
-        demoTrackId: demoTrackId === NO_DEMO ? undefined : demoTrackId,
+        inputAssetId,
+        pitch,
+        searchFeatureRatio,
       }),
     });
     const json = await res.json().catch(() => null);
     setLoading(false);
     if (!res.ok || !json?.ok) {
-      toast.error(json?.error?.message || "Failed to start generation");
+      toast.error(json?.error?.message || "Could not start voice conversion.");
       return;
     }
     setJobId(json.data.jobId);
-    toast.success("Generation started (placeholder)");
+    toast.success("Voice conversion started.");
   }
 
   React.useEffect(() => {
@@ -83,14 +83,14 @@ export function GenerateForm({
   }, [jobId]);
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
       <Card className="p-6">
-        <div className="text-sm font-semibold">1) Choose voice</div>
+        <div className="text-sm font-semibold">1) Choose Cloned Voice</div>
         <div className="mt-3 grid gap-2">
-          <Label>Voice profile</Label>
+          <Label>Cloned voice</Label>
           <Select value={voiceProfileId} onValueChange={setVoiceProfileId}>
             <SelectTrigger>
-              <SelectValue placeholder="Select a voice" />
+              <SelectValue placeholder="Select a cloned voice" />
             </SelectTrigger>
             <SelectContent>
               {voices.map((v) => (
@@ -102,75 +102,100 @@ export function GenerateForm({
           </Select>
         </div>
 
-        <div className="mt-6 text-sm font-semibold">2) Provide a track</div>
+        <div className="mt-6 text-sm font-semibold">2) Upload Singing Record</div>
+        <div className="mt-1 text-xs text-muted-foreground">
+          Upload a clean vocal audio file. We will use this for voice conversion.
+        </div>
         <div className="mt-3 grid gap-3">
-          <div className="grid gap-2">
-            <Label>Demo track (optional)</Label>
-            <Select
-              value={demoTrackId}
-              onValueChange={(v) => {
-                setDemoTrackId(v);
-                if (v !== NO_DEMO) setInputAssetId(null);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a demo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NO_DEMO}>None</SelectItem>
-                <SelectItem value="demo_pop_01">Demo Pop 01 (placeholder)</SelectItem>
-                <SelectItem value="demo_ballad_01">Demo Ballad 01 (placeholder)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="text-xs text-muted-foreground">Or upload your own audio (stored as `song_input`).</div>
-            <DatasetUploader
-              type="song_input"
-              onAssetCreated={(id) => {
-                setInputAssetId(id);
-                setDemoTrackId(NO_DEMO);
-              }}
-            />
+          <DatasetUploader
+            type="song_input"
+            voiceProfileId={voiceProfileId || undefined}
+            onAssetCreated={(id) => {
+              setInputAssetId(id);
+            }}
+          />
         </div>
       </Card>
 
       <Card className="p-6">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-sm font-semibold">3) Generate (placeholder)</div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              The backend endpoints exist; output is a stub for now.
+        <div>
+          <div className="text-sm font-semibold">3) Voice Style</div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            Split audio is always on. Extra effects stay off for a clean result.
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-4">
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between">
+              <Label>Pitch</Label>
+              <span className="text-xs text-muted-foreground">{pitch}</span>
+            </div>
+            <input
+              type="range"
+              min={-24}
+              max={24}
+              step={1}
+              value={pitch}
+              onChange={(e) => setPitch(Number(e.target.value))}
+              className="h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary"
+            />
+            <div className="text-xs text-muted-foreground">Lower values sound deeper, higher values sound brighter.</div>
+          </div>
+
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between">
+              <Label>Search Feature Ratio</Label>
+              <span className="text-xs text-muted-foreground">{searchFeatureRatio.toFixed(2)}</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={searchFeatureRatio}
+              onChange={(e) => setSearchFeatureRatio(Number(e.target.value))}
+              className="h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary"
+            />
+            <div className="text-xs text-muted-foreground">
+              Higher values keep the cloned voice tone stronger. Lower values keep more of the original singing style.
             </div>
           </div>
-          <Button className="rounded-full" onClick={start} disabled={loading}>
-            {loading ? "Starting..." : "Generate"}
+
+          <Button className="mt-1 rounded-full cursor-pointer" onClick={start} disabled={loading}>
+            {loading ? "Starting..." : "Convert"}
           </Button>
         </div>
 
         <div className="mt-6 rounded-xl border p-4">
           <div className="flex items-center justify-between">
             <div className="text-xs text-muted-foreground">Status</div>
-            <Badge variant="secondary">{job?.status || "idle"}</Badge>
+            <Badge variant="secondary">{toStatusLabel(job?.status || null)}</Badge>
           </div>
           <div className="mt-3">
             <Progress value={job?.progress ?? 0} />
             <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-              <span>{jobId ? `job: ${jobId}` : "No job"}</span>
+              <span>{jobId ? `Session: ${jobId}` : "No conversion yet"}</span>
               <span>{job?.progress ?? 0}%</span>
             </div>
           </div>
           <div className="mt-4 text-sm">
             {job?.status === "succeeded" ? (
-              <div>
-                Output is a placeholder in this MVP. When ML is integrated, this will link to a generated audio asset.
-              </div>
+              <div>Conversion finished. We will add output playback in the next step.</div>
             ) : (
-              <div className="text-muted-foreground">Start generation to see progress and results here.</div>
+              <div className="text-muted-foreground">Start conversion to see progress here.</div>
             )}
           </div>
         </div>
       </Card>
     </div>
   );
+}
+
+function toStatusLabel(status: GenJob["status"] | null) {
+  if (status === "queued") return "Preparing";
+  if (status === "running") return "Converting";
+  if (status === "succeeded") return "Done";
+  if (status === "failed") return "Failed";
+  return "Idle";
 }

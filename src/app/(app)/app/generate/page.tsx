@@ -13,7 +13,7 @@ export default async function GeneratePage({
   const userId = session!.user.id;
   const params = await searchParams;
   const voices = await prisma.voiceProfile.findMany({
-    where: { userId, deletedAt: null },
+    where: { userId, deletedAt: null, versions: { some: {} } },
     orderBy: { createdAt: "desc" },
     select: { id: true, name: true, language: true },
   });
@@ -23,12 +23,15 @@ export default async function GeneratePage({
 
   return (
     <main className="og-app-main">
-      <PageHeader title="Generate Song" description="End-to-end flow with placeholder outputs." />
+      <PageHeader
+        title="Generate"
+        description="Use your cloned voices to convert clean singing records."
+      />
 
       <div className="mt-8">
         {voices.length === 0 ? (
           <div className="rounded-xl border p-6 text-sm text-muted-foreground">
-            Create a voice profile first.
+            Clone a voice first, then come back here to convert your singing record.
           </div>
         ) : (
           <GenerateForm voices={voices} initialVoiceProfileId={initialVoiceId} />
