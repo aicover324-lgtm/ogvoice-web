@@ -1,13 +1,19 @@
 "use client";
 
 import * as React from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { VoiceCloneCard, type VoiceCloneCardData } from "@/components/app/voice-clone-card";
 
 type ReadyFilter = "all" | "missing_record" | "failed" | "cloning_now";
+const READY_FILTER_QUERY_KEY = "rf";
 
 export function CloneVoiceSections({ voices }: { voices: VoiceCloneCardData[] }) {
-  const [readyFilter, setReadyFilter] = React.useState<ReadyFilter>("all");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const readyFilter = parseReadyFilter(searchParams.get(READY_FILTER_QUERY_KEY));
 
   const readyVoices = React.useMemo(
     () => voices.filter((v) => v.latestTrainingJob?.status !== "succeeded"),
@@ -28,6 +34,20 @@ export function CloneVoiceSections({ voices }: { voices: VoiceCloneCardData[] })
     if (readyFilter === "failed") return readyVoices.filter((v) => v.latestTrainingJob?.status === "failed");
     return readyVoices.filter((v) => v.latestTrainingJob?.status === "queued" || v.latestTrainingJob?.status === "running");
   }, [readyFilter, readyVoices]);
+
+  const setReadyFilter = React.useCallback(
+    (next: ReadyFilter) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (next === "all") {
+        params.delete(READY_FILTER_QUERY_KEY);
+      } else {
+        params.set(READY_FILTER_QUERY_KEY, next);
+      }
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
 
   return (
     <div className="mt-8 space-y-10">
@@ -88,6 +108,13 @@ export function CloneVoiceSections({ voices }: { voices: VoiceCloneCardData[] })
       </section>
     </div>
   );
+}
+
+function parseReadyFilter(value: string | null): ReadyFilter {
+  if (value === "missing_record") return "missing_record";
+  if (value === "failed") return "failed";
+  if (value === "cloning_now") return "cloning_now";
+  return "all";
 }
 
 function VoiceGrid({
