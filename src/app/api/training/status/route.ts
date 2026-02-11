@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { err, ok } from "@/lib/api-response";
 import { env } from "@/lib/env";
 import { runpodCancel, runpodRun, runpodStatus } from "@/lib/runpod";
-import { trainingCheckpointZipKey, trainingModelName } from "@/lib/storage/keys";
+import { trainingCheckpointZipKey, trainingModelName, voiceDatasetFlacKey } from "@/lib/storage/keys";
 import { deleteObjects } from "@/lib/storage/s3";
 
 const querySchema = z.object({
@@ -235,6 +235,13 @@ export async function GET(req: Request) {
               errorText || fallbackMessage,
         },
       });
+      await cleanupFailedStorageArtifacts({
+        userId: session.user.id,
+        voiceProfileId: job.voiceProfileId,
+        datasetAssetId: job.datasetAssetId,
+        datasetKey: job.datasetKey,
+        artifactKey: job.artifactKey,
+      });
       }
     } else {
       const now = Date.now();
@@ -249,6 +256,10 @@ export async function GET(req: Request) {
             jobId: job.id,
             runpodRequestId: job.runpodRequestId,
             progress: job.progress || 0,
+            voiceProfileId: job.voiceProfileId,
+            datasetAssetId: job.datasetAssetId,
+            datasetKey: job.datasetKey,
+            artifactKey: job.artifactKey,
             reason: "queue_timeout",
             message: "Training stayed in queue too long and was stopped to protect your credits.",
           });
@@ -280,6 +291,10 @@ export async function GET(req: Request) {
             jobId: job.id,
             runpodRequestId: job.runpodRequestId,
             progress: currentProgress,
+            voiceProfileId: job.voiceProfileId,
+            datasetAssetId: job.datasetAssetId,
+            datasetKey: job.datasetKey,
+            artifactKey: job.artifactKey,
             reason: "hard_timeout",
             message: "Training took too long and was stopped to protect your credits.",
           });
@@ -289,6 +304,10 @@ export async function GET(req: Request) {
             jobId: job.id,
             runpodRequestId: job.runpodRequestId,
             progress: currentProgress,
+            voiceProfileId: job.voiceProfileId,
+            datasetAssetId: job.datasetAssetId,
+            datasetKey: job.datasetKey,
+            artifactKey: job.artifactKey,
             reason: "watchdog_stall",
             message: "Training appears stuck and was stopped to protect your credits.",
           });
@@ -338,6 +357,10 @@ async function failTrainingJobWithWatchdog(args: {
   jobId: string;
   runpodRequestId: string | null;
   progress: number;
+  voiceProfileId: string;
+  datasetAssetId: string | null;
+  datasetKey: string | null;
+  artifactKey: string | null;
   reason: "queue_timeout" | "hard_timeout" | "watchdog_stall";
   message: string;
 }) {
@@ -358,6 +381,14 @@ async function failTrainingJobWithWatchdog(args: {
     },
   });
 
+  await cleanupFailedStorageArtifacts({
+    userId: args.userId,
+    voiceProfileId: args.voiceProfileId,
+    datasetAssetId: args.datasetAssetId,
+    datasetKey: args.datasetKey,
+    artifactKey: args.artifactKey,
+  });
+
   try {
     await prisma.auditLog.create({
       data: {
@@ -373,6 +404,55 @@ async function failTrainingJobWithWatchdog(args: {
     });
   } catch {
     // Ignore audit failures.
+  }
+}
+
+async function cleanupFailedStorageArtifacts(args: {
+  userId: string;
+  voiceProfileId: string;
+  datasetAssetId: string | null;
+  datasetKey: string | null;
+  artifactKey: string | null;
+}) {
+  const keys = new Set<string>();
+  if (args.datasetKey) keys.add(args.datasetKey);
+  if (args.artifactKey) keys.add(args.artifactKey);
+
+  if (args.datasetAssetId) {
+    const [asset, voice] = await Promise.all([
+      prisma.uploadAsset.findFirst({
+        where: {
+          id: args.datasetAssetId,
+          userId: args.userId,
+          voiceProfileId: args.voiceProfileId,
+          type: "dataset_audio",
+        },
+        select: { storageKey: true },
+      }),
+      prisma.voiceProfile.findFirst({
+        where: { id: args.voiceProfileId, userId: args.userId, deletedAt: null },
+        select: { name: true },
+      }),
+    ]);
+
+    if (voice) {
+      const archiveKey = voiceDatasetFlacKey({
+        userId: args.userId,
+        voiceProfileId: args.voiceProfileId,
+        voiceName: voice.name,
+      });
+      if (!asset || asset.storageKey !== archiveKey) {
+        keys.add(archiveKey);
+      }
+    }
+  }
+
+  if (keys.size > 0) {
+    try {
+      await deleteObjects(Array.from(keys));
+    } catch {
+      // Best-effort cleanup only.
+    }
   }
 }
 

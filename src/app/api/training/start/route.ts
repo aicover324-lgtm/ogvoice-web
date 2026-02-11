@@ -11,7 +11,7 @@ import {
   trainingModelZipKey,
   voiceDatasetFlacKey,
 } from "@/lib/storage/keys";
-import { copyObject } from "@/lib/storage/s3";
+import { copyObject, deleteObjects } from "@/lib/storage/s3";
 import { runpodRun } from "@/lib/runpod";
 import { precheckDatasetWav } from "@/lib/training/precheck";
 
@@ -135,6 +135,11 @@ export async function POST(req: Request) {
 
     return ok({ jobId: job.id, runpodRequestId: runRes.id });
   } catch (e) {
+    try {
+      await deleteObjects([datasetKey, outKey]);
+    } catch {
+      // Best-effort cleanup only.
+    }
     await prisma.trainingJob.update({
       where: { id: job.id },
       data: {

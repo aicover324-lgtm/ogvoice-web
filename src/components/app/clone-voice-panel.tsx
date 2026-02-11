@@ -163,7 +163,7 @@ export function CloneVoicePanel({
       : status === "succeeded"
         ? "Voice successfully cloned !"
         : status === "failed"
-          ? "Voice cloning failed"
+          ? "Re-clone Voice"
           : "Clone Voice";
 
   const statusText =
