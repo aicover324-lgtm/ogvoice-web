@@ -21,9 +21,6 @@ export default async function VoicesPage() {
         <h1 className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
           Clone Voice
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Your voices appear here right after creation. Tap “Clone Voice” to start training.
-        </p>
       </div>
 
       <div className="mt-8 grid auto-rows-fr gap-4 md:grid-cols-2 lg:grid-cols-3">

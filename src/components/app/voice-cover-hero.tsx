@@ -22,13 +22,13 @@ export function VoiceCoverHero({
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-black/5 bg-muted/40 dark:border-white/10 dark:bg-white/5">
-      <div className="aspect-[16/9] w-full">
+      <div className="aspect-square w-full">
         {ok ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={src}
             alt="Cover"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover object-center"
             onError={() => setOk(false)}
           />
         ) : (

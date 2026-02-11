@@ -112,7 +112,12 @@ export function CloneVoicePanel({
 
   return (
     <div className="grid gap-2">
-      <Button type="button" className="rounded-full" onClick={() => void start()} disabled={!canStart}>
+      <Button
+        type="button"
+        className="rounded-full cursor-pointer disabled:pointer-events-auto disabled:cursor-not-allowed"
+        onClick={() => void start()}
+        disabled={!canStart}
+      >
         {label}
       </Button>
       {compact ? null : jobId ? <div className="text-xs text-muted-foreground">Job: {jobId.slice(0, 12)}</div> : null}
