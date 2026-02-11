@@ -93,7 +93,7 @@ export default function NewVoicePage() {
         <Button
           type="button"
           variant="outline"
-          className="rounded-full"
+          className="rounded-full cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-auto"
           disabled={cleaning}
           onClick={() => {
             void (async () => {
@@ -202,9 +202,11 @@ export default function NewVoicePage() {
                   type="submit"
                   disabled={!canSubmit}
                   className={
-                    canSubmit
-                      ? "relative h-11 rounded-full px-7 text-sm font-semibold shadow-lg shadow-black/10 dark:shadow-black/30 bg-gradient-to-r from-cyan-600 to-fuchsia-600 hover:from-cyan-500 hover:to-fuchsia-500"
-                      : "relative h-11 rounded-full px-7 text-sm font-semibold border border-black/10 bg-muted text-muted-foreground shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-white/60"
+                    (
+                      canSubmit
+                        ? "relative h-11 rounded-full px-7 text-sm font-semibold shadow-lg shadow-black/10 dark:shadow-black/30 bg-gradient-to-r from-cyan-600 to-fuchsia-600 hover:from-cyan-500 hover:to-fuchsia-500 cursor-pointer"
+                        : "relative h-11 rounded-full px-7 text-sm font-semibold border border-black/10 bg-muted text-muted-foreground shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-white/60"
+                    ) + " disabled:pointer-events-auto disabled:cursor-not-allowed"
                   }
                 >
                   {creating ? "Creating..." : "Create Voice"}
