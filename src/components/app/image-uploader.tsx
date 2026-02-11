@@ -9,6 +9,30 @@ import { Progress } from "@/components/ui/progress";
 type UploadType = "avatar_image" | "voice_cover_image";
 type PreviewVariant = "avatar" | "cover";
 
+const IMAGE_ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function isValidImageFile(file: File) {
+  const type = (file.type || "").toLowerCase();
+  if (type) return IMAGE_ALLOWED_MIME.has(type);
+  const lower = file.name.toLowerCase();
+  return lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") || lower.endsWith(".webp");
+}
+
+function draggedImageState(dt: DataTransfer): "valid" | "invalid" | "unknown" {
+  const items = Array.from(dt.items || []);
+  const fileItems = items.filter((item) => item.kind === "file");
+  if (fileItems.length === 0) return "unknown";
+
+  let sawValid = false;
+  for (const item of fileItems) {
+    const t = (item.type || "").toLowerCase();
+    if (!t) continue;
+    if (!IMAGE_ALLOWED_MIME.has(t)) return "invalid";
+    sawValid = true;
+  }
+  return sawValid ? "valid" : "unknown";
+}
+
 export type ImageUploaderHandle = {
   openPicker: () => void;
 };
@@ -53,6 +77,7 @@ export const ImageUploader = React.forwardRef<ImageUploaderHandle, {
   const [progress, setProgress] = React.useState(0);
   const [previewKey, setPreviewKey] = React.useState(0);
   const [previewOk, setPreviewOk] = React.useState(true);
+  const [dragState, setDragState] = React.useState<"idle" | "valid" | "invalid">("idle");
 
   React.useEffect(() => {
     // Initialize on client to avoid hydration mismatch.
@@ -74,6 +99,10 @@ export const ImageUploader = React.forwardRef<ImageUploaderHandle, {
   );
 
   async function upload(file: File) {
+    if (!isValidImageFile(file)) {
+      toast.error("Only jpg/png/webp images are allowed.");
+      return;
+    }
     setBusy(true);
     setProgress(1);
     try {
@@ -163,6 +192,7 @@ export const ImageUploader = React.forwardRef<ImageUploaderHandle, {
   const previewWidth = preview?.width ?? previewSize;
   const previewHeight = preview?.height ?? previewSize;
   const effectiveTrigger: "button" | "frame" = trigger ?? "button";
+  const frameBlocked = dragState === "invalid";
 
   if (headless) {
     return (
@@ -194,10 +224,42 @@ export const ImageUploader = React.forwardRef<ImageUploaderHandle, {
             aria-label={type === "avatar_image" ? "Upload avatar" : "Upload cover"}
             className={
               preview.variant === "avatar"
-                ? "group relative grid cursor-pointer place-items-center overflow-hidden rounded-full border bg-muted disabled:cursor-not-allowed"
-                : "group relative grid cursor-pointer place-items-center overflow-hidden rounded-xl border bg-muted disabled:cursor-not-allowed w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                ? `group relative grid place-items-center overflow-hidden rounded-full border bg-muted disabled:cursor-not-allowed ${frameBlocked ? "cursor-not-allowed ring-2 ring-destructive/35" : "cursor-pointer"}`
+                : `group relative grid place-items-center overflow-hidden rounded-xl border bg-muted disabled:cursor-not-allowed w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${frameBlocked ? "cursor-not-allowed ring-2 ring-destructive/35" : "cursor-pointer"}`
             }
             style={{ width: previewWidth, height: previewHeight }}
+            onDragEnter={(e) => {
+              if (effectiveTrigger !== "frame") return;
+              e.preventDefault();
+              e.stopPropagation();
+              const state = draggedImageState(e.dataTransfer);
+              setDragState(state === "invalid" ? "invalid" : "valid");
+            }}
+            onDragOver={(e) => {
+              if (effectiveTrigger !== "frame") return;
+              e.preventDefault();
+              e.stopPropagation();
+              const state = draggedImageState(e.dataTransfer);
+              const invalid = state === "invalid";
+              e.dataTransfer.dropEffect = invalid ? "none" : "copy";
+              setDragState(invalid ? "invalid" : "valid");
+            }}
+            onDragLeave={(e) => {
+              if (effectiveTrigger !== "frame") return;
+              e.preventDefault();
+              e.stopPropagation();
+              setDragState("idle");
+            }}
+            onDrop={(e) => {
+              if (effectiveTrigger !== "frame") return;
+              e.preventDefault();
+              e.stopPropagation();
+              setDragState("idle");
+              if (busy) return;
+              const file = e.dataTransfer.files?.[0];
+              if (!file) return;
+              void upload(file);
+            }}
           >
             {previewSrc && previewOk ? (
               // Use <img> (not next/image) to avoid remotePatterns issues with presigned redirects.
