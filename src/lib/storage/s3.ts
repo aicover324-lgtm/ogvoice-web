@@ -83,6 +83,23 @@ export async function getObjectBytes(args: { key: string; maxBytes: number }) {
   return buf;
 }
 
+export async function getObjectRangeBytes(args: { key: string; start: number; end: number; maxBytes: number }) {
+  if (!Number.isInteger(args.start) || !Number.isInteger(args.end) || args.start < 0 || args.end < args.start) {
+    throw new Error("Invalid range");
+  }
+  const cmd = new GetObjectCommand({
+    Bucket: env.S3_BUCKET,
+    Key: args.key,
+    Range: `bytes=${args.start}-${args.end}`,
+  });
+  const res = await s3.send(cmd);
+  const buf = await streamToBuffer(res.Body);
+  if (buf.length > args.maxBytes) {
+    throw new Error(`Object range too large (${buf.length} bytes)`);
+  }
+  return buf;
+}
+
 export async function putObjectBytes(args: {
   key: string;
   bytes: Buffer;

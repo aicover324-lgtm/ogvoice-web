@@ -8,6 +8,12 @@ type TrainingNamedKeyArgs = TrainingKeyArgs & {
   voiceName: string;
 };
 
+type TrainingCheckpointKeyArgs = {
+  userId: string;
+  voiceProfileId: string;
+  datasetAssetId: string;
+};
+
 type VoiceKeyArgs = {
   userId: string;
   voiceProfileId: string;
@@ -93,6 +99,18 @@ export function trainingModelZipKey(args: TrainingNamedKeyArgs) {
 // Optional: training log artifact
 export function trainingLogKey(args: TrainingKeyArgs) {
   return `models/${trainingPrefix(args)}/train.log`;
+}
+
+export function trainingCheckpointZipKey(args: TrainingCheckpointKeyArgs) {
+  assertSafeKeyPart(args.userId, "userId");
+  assertSafeKeyPart(args.voiceProfileId, "voiceProfileId");
+  assertSafeKeyPart(args.datasetAssetId, "datasetAssetId");
+  return `models/u/${args.userId}/v/${args.voiceProfileId}/resume/ds-${args.datasetAssetId}.zip`;
+}
+
+export function trainingModelName(voiceProfileId: string) {
+  assertSafeKeyPart(voiceProfileId, "voiceProfileId");
+  return `voice-${voiceProfileId}`;
 }
 
 export function voiceDatasetWavKey(args: VoiceNamedKeyArgs) {

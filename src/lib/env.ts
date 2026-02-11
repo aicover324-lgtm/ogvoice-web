@@ -30,6 +30,12 @@ const serverSchema = z.object({
   // RunPod (training runner)
   RUNPOD_API_KEY: optionalString,
   RUNPOD_ENDPOINT_ID: optionalString,
+  TRAINING_TOTAL_EPOCH_DEFAULT: z.coerce.number().int().min(1).max(10000).default(1),
+  TRAINING_BATCH_SIZE_DEFAULT: z.coerce.number().int().min(1).max(50).default(4),
+  TRAINING_SAVE_EVERY_EPOCH_DEFAULT: z.coerce.number().int().min(1).max(100).default(1),
+  TRAINING_WATCHDOG_QUEUE_TIMEOUT_SECONDS: z.coerce.number().int().min(30).max(86400).default(900),
+  TRAINING_WATCHDOG_HARD_TIMEOUT_SECONDS: z.coerce.number().int().min(60).max(172800).default(5400),
+  TRAINING_WATCHDOG_STALL_SECONDS: z.coerce.number().int().min(30).max(86400).default(300),
 
   UPLOAD_MAX_FILE_BYTES_FREE: z.coerce.number().int().positive().default(104857600),
   UPLOAD_MAX_FILE_BYTES_PRO: z.coerce.number().int().positive().default(524288000),

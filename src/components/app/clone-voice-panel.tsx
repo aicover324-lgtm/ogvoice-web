@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 export type CloneTrainingStatus = "queued" | "running" | "succeeded" | "failed";
 export type ClonePanelVisualState = "idle" | "cloning" | "cloned" | "failed";
 
+const INFRA_AUTO_RETRY_MARKER = "[auto-retry:1]";
+
 export function CloneVoicePanel({
   voiceProfileId,
   hasDataset,
@@ -35,6 +37,8 @@ export function CloneVoicePanel({
   const [errorMessage, setErrorMessage] = React.useState<string | null>(initialErrorMessage ?? null);
   const lastStatusRef = React.useRef<CloneTrainingStatus | null>(initialStatus ?? null);
   const successNotifiedRef = React.useRef(initialStatus === "succeeded");
+  const failedNotifiedRef = React.useRef(initialStatus === "failed");
+  const retryNotifiedRef = React.useRef(false);
 
   React.useEffect(() => {
     setJobId(initialJobId ?? null);
@@ -43,6 +47,8 @@ export function CloneVoicePanel({
     setErrorMessage(initialErrorMessage ?? null);
     lastStatusRef.current = initialStatus ?? null;
     successNotifiedRef.current = initialStatus === "succeeded";
+    failedNotifiedRef.current = initialStatus === "failed";
+    retryNotifiedRef.current = false;
   }, [initialArtifactKey, initialErrorMessage, initialJobId, initialStatus]);
 
   const refresh = React.useCallback(async (nextJobId: string) => {
@@ -88,12 +94,36 @@ export function CloneVoicePanel({
     if (status === "succeeded" && !successNotifiedRef.current) {
       toast.success("Voice successfully cloned !");
       successNotifiedRef.current = true;
+      failedNotifiedRef.current = false;
+      return;
+    }
+    if (status === "failed" && !failedNotifiedRef.current) {
+      toast.error("Voice cloning failed");
+      failedNotifiedRef.current = true;
+      successNotifiedRef.current = false;
       return;
     }
     if (status !== "succeeded") {
       successNotifiedRef.current = false;
     }
+    if (status !== "failed") {
+      failedNotifiedRef.current = false;
+    }
   }, [status]);
+
+  const autoRetryActive =
+    (status === "queued" || status === "running") && !!errorMessage?.includes(INFRA_AUTO_RETRY_MARKER);
+
+  React.useEffect(() => {
+    if (autoRetryActive && !retryNotifiedRef.current) {
+      toast.message("Temporary server issue detected. Retrying automatically...");
+      retryNotifiedRef.current = true;
+      return;
+    }
+    if (!autoRetryActive) {
+      retryNotifiedRef.current = false;
+    }
+  }, [autoRetryActive]);
 
   async function start() {
     if (!hasDataset) {
@@ -133,7 +163,7 @@ export function CloneVoicePanel({
       : status === "succeeded"
         ? "Voice successfully cloned !"
         : status === "failed"
-          ? "Try again"
+          ? "Voice cloning failed"
           : "Clone Voice";
 
   const statusText =
@@ -146,6 +176,12 @@ export function CloneVoicePanel({
           : status === "failed"
             ? "Failed"
             : null;
+
+  const inlineInfo = autoRetryActive
+    ? "Temporary server issue detected. We are retrying automatically."
+    : null;
+
+  const inlineError = toUserFacingError(status, errorMessage);
 
   return (
     <div className="grid gap-2">
@@ -165,10 +201,31 @@ export function CloneVoicePanel({
       )}
       {compact ? null : jobId ? <div className="text-xs text-muted-foreground">Job: {jobId.slice(0, 12)}</div> : null}
       {!compact && statusText ? <div className="text-xs text-muted-foreground">Status: {statusText}</div> : null}
-      {errorMessage ? <div className="text-xs text-destructive">{errorMessage}</div> : null}
+      {inlineInfo ? <div className="text-xs text-muted-foreground">{inlineInfo}</div> : null}
+      {inlineError ? <div className="text-xs text-destructive">{inlineError}</div> : null}
       {!compact && artifactKey && status === "succeeded" ? (
         <div className="text-xs text-muted-foreground">Model is ready. It appears in “Model versions”.</div>
       ) : null}
     </div>
   );
+}
+
+function toUserFacingError(status: CloneTrainingStatus | null, errorMessage: string | null) {
+  if (!errorMessage) return null;
+  if (errorMessage.includes(INFRA_AUTO_RETRY_MARKER) && status !== "failed") return null;
+
+  const msg = errorMessage.trim();
+  const lower = msg.toLowerCase();
+
+  if (lower.includes("request cancelled") || lower.includes("cancelled")) {
+    return "Voice cloning failed because the job was cancelled.";
+  }
+  if (lower.includes("timed out") || lower.includes("timeout")) {
+    return "Voice cloning failed because the training timed out.";
+  }
+  if (lower.startsWith("{") || lower.includes("worker") || lower.includes("network") || lower.includes("gateway")) {
+    return "Voice cloning failed due to a temporary server issue. Please try again.";
+  }
+
+  return msg;
 }

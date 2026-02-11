@@ -11,6 +11,8 @@ type RunpodStatusResult = {
   status: string;
   output?: unknown;
   error?: unknown;
+  delayTime?: unknown;
+  executionTime?: unknown;
 };
 
 function requireRunpodConfig() {
@@ -55,4 +57,21 @@ export async function runpodStatus(requestId: string): Promise<RunpodStatusResul
     throw new Error(json?.error?.message || json?.message || "RunPod status failed");
   }
   return json as RunpodStatusResult;
+}
+
+export async function runpodCancel(requestId: string): Promise<boolean> {
+  const { apiKey, endpointId } = requireRunpodConfig();
+  const res = await fetch(`https://api.runpod.ai/v2/${endpointId}/cancel/${encodeURIComponent(requestId)}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!res.ok) {
+    const json = await res.json().catch(() => null);
+    throw new Error(json?.error?.message || json?.message || "RunPod cancel failed");
+  }
+  return true;
 }
