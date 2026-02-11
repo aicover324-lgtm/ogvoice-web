@@ -29,20 +29,21 @@ export function VoiceCloneCard({ voice }: { voice: VoiceCloneCardData }) {
 
   return (
     <PremiumCard className="h-full min-h-[520px] p-5" contentClassName="flex h-full flex-col">
+      <div className="absolute right-4 top-4 z-20">
+        <VoiceActionsMenu
+          voiceId={voice.id}
+          initialName={meta.name}
+          initialLanguage={meta.language}
+          initialDescription={meta.description}
+          onVoiceUpdated={(next) => setMeta(next)}
+          onCoverReplaced={() => {
+            setNonce(Date.now());
+          }}
+        />
+      </div>
+
       <div className="relative">
         <VoiceCoverHero voiceId={voice.id} nonce={nonce} />
-        <div className="absolute right-2 top-2">
-          <VoiceActionsMenu
-            voiceId={voice.id}
-            initialName={meta.name}
-            initialLanguage={meta.language}
-            initialDescription={meta.description}
-            onVoiceUpdated={(next) => setMeta(next)}
-            onCoverReplaced={() => {
-              setNonce(Date.now());
-            }}
-          />
-        </div>
       </div>
 
       <div className="mt-4">

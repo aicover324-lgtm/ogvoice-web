@@ -42,6 +42,7 @@ export function VoiceActionsMenu({
 }) {
   const router = useRouter();
   const uploaderRef = React.useRef<ImageUploaderHandle | null>(null);
+  const [menuOpen, setMenuOpen] = React.useState(false);
   const [editOpen, setEditOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -87,6 +88,7 @@ export function VoiceActionsMenu({
       description: description.trim() ? description.trim() : null,
     });
     toast.success("Voice updated");
+    setMenuOpen(false);
     setEditOpen(false);
     router.refresh();
   }
@@ -110,7 +112,7 @@ export function VoiceActionsMenu({
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button type="button" variant="ghost" className="h-8 w-8 p-0" aria-label="Voice settings">
             <MoreHorizontal className="h-4 w-4" />
@@ -121,6 +123,7 @@ export function VoiceActionsMenu({
             <DropdownMenuItem
               onSelect={(e) => {
                 e.preventDefault();
+                setMenuOpen(false);
                 setEditOpen(true);
               }}
             >
@@ -131,6 +134,7 @@ export function VoiceActionsMenu({
           <DropdownMenuItem
             onSelect={(e) => {
               e.preventDefault();
+              setMenuOpen(false);
               uploaderRef.current?.openPicker();
             }}
           >
@@ -142,6 +146,7 @@ export function VoiceActionsMenu({
             variant="destructive"
             onSelect={(e) => {
               e.preventDefault();
+              setMenuOpen(false);
               setDeleteOpen(true);
             }}
           >
