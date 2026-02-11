@@ -3,13 +3,13 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { env } from "@/lib/env";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { RestoreVoiceButton, PurgeVoiceButton } from "@/components/app/trash-actions";
 import { PageHeader } from "@/components/ui/page-header";
 import { AlertTriangle } from "lucide-react";
+
+const TRASH_RETENTION_DAYS = 2;
 
 function formatBytes(n: number) {
   const units = ["B", "KB", "MB", "GB"];
@@ -54,61 +54,60 @@ export default async function TrashPage() {
         }
       />
 
-      <Card className="mt-6 p-5">
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold">Automatic cleanup</div>
-          <Badge variant="secondary">{env.PURGE_RETENTION_DAYS} days</Badge>
-        </div>
-        <Separator className="my-3" />
-        <div className="text-sm text-muted-foreground">
-          Voices deleted more than {env.PURGE_RETENTION_DAYS} days ago can be permanently removed by the cleanup job.
-        </div>
-      </Card>
-
       <div className="mt-8 grid gap-4">
         {voices.length === 0 ? (
-          <Card className="p-6">
-            <div className="text-sm font-semibold">Trash is empty</div>
-            <p className="mt-2 text-sm text-muted-foreground">You have no deleted voices.</p>
-          </Card>
+          <>
+            <Card className="p-6">
+              <div className="text-sm font-semibold">Trash is empty</div>
+              <p className="mt-2 text-sm text-muted-foreground">You have no deleted voices.</p>
+            </Card>
+            <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+              Voices moved to trash are permanently deleted after two days.
+            </div>
+          </>
         ) : (
-          voices.map((v) => {
-            const bytes = v.assets.reduce((acc, a) => acc + a.fileSize, 0);
-            const left = daysLeftUntilPurge(v.deletedAt, env.PURGE_RETENTION_DAYS);
-            const purgeLabel =
-              left === null ? null : left > 0 ? `Auto-delete in ${left}d` : "Ready to auto-delete";
-            const badgeVariant = left !== null && left <= 0 ? "destructive" : "outline";
-            return (
-              <Card key={v.id} className="p-6">
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="truncate text-base font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
-                        {v.name}
+          <>
+            <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+              Voices moved to trash are permanently deleted after two days.
+            </div>
+            {voices.map((v) => {
+              const bytes = v.assets.reduce((acc, a) => acc + a.fileSize, 0);
+              const left = daysLeftUntilPurge(v.deletedAt, TRASH_RETENTION_DAYS);
+              const purgeLabel =
+                left === null ? null : left > 0 ? `Auto-delete in ${left}d` : "Ready to auto-delete";
+              const badgeVariant = left !== null && left <= 0 ? "destructive" : "outline";
+              return (
+                <Card key={v.id} className="p-6">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="truncate text-base font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
+                          {v.name}
+                        </div>
+                        {purgeLabel ? (
+                          <Badge variant={badgeVariant} className={left !== null && left <= 0 ? "gap-1" : undefined}>
+                            {left !== null && left <= 0 ? <AlertTriangle className="h-3 w-3" /> : null}
+                            {purgeLabel}
+                          </Badge>
+                        ) : null}
                       </div>
-                      {purgeLabel ? (
-                        <Badge variant={badgeVariant} className={left !== null && left <= 0 ? "gap-1" : undefined}>
-                          {left !== null && left <= 0 ? <AlertTriangle className="h-3 w-3" /> : null}
-                          {purgeLabel}
-                        </Badge>
-                      ) : null}
+                      <div className="mt-1 text-sm text-muted-foreground">
+                        {v.language || "Language not set"} · dataset {formatBytes(bytes)}
+                      </div>
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        Deleted: {v.deletedAt ? new Date(v.deletedAt).toLocaleString() : "-"}
+                      </div>
                     </div>
-                    <div className="mt-1 text-sm text-muted-foreground">
-                      {v.language || "Language not set"} · dataset {formatBytes(bytes)}
-                    </div>
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      Deleted: {v.deletedAt ? new Date(v.deletedAt).toLocaleString() : "-"}
-                    </div>
-                  </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    <RestoreVoiceButton voiceId={v.id} />
-                    <PurgeVoiceButton voiceId={v.id} />
+                    <div className="flex flex-wrap gap-2">
+                      <RestoreVoiceButton voiceId={v.id} />
+                      <PurgeVoiceButton voiceId={v.id} />
+                    </div>
                   </div>
-                </div>
-              </Card>
-            );
-          })
+                </Card>
+              );
+            })}
+          </>
         )}
       </div>
     </main>
