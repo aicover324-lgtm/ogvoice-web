@@ -4,14 +4,22 @@ import { prisma } from "@/lib/prisma";
 import { GenerateForm } from "@/components/app/generate-form";
 import { PageHeader } from "@/components/ui/page-header";
 
-export default async function GeneratePage() {
+export default async function GeneratePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ voiceId?: string }>;
+}) {
   const session = await getServerSession(authOptions);
   const userId = session!.user.id;
+  const params = await searchParams;
   const voices = await prisma.voiceProfile.findMany({
     where: { userId, deletedAt: null },
     orderBy: { createdAt: "desc" },
     select: { id: true, name: true, language: true },
   });
+
+  const requestedVoiceId = typeof params.voiceId === "string" ? params.voiceId : null;
+  const initialVoiceId = requestedVoiceId && voices.some((v) => v.id === requestedVoiceId) ? requestedVoiceId : null;
 
   return (
     <main className="og-app-main">
@@ -23,7 +31,7 @@ export default async function GeneratePage() {
             Create a voice profile first.
           </div>
         ) : (
-          <GenerateForm voices={voices} />
+          <GenerateForm voices={voices} initialVoiceProfileId={initialVoiceId} />
         )}
       </div>
     </main>

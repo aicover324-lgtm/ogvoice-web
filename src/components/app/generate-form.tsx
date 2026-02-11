@@ -15,8 +15,19 @@ type GenJob = { id: string; status: "queued" | "running" | "succeeded" | "failed
 
 const NO_DEMO = "__none__";
 
-export function GenerateForm({ voices }: { voices: Voice[] }) {
-  const [voiceProfileId, setVoiceProfileId] = React.useState<string>(voices[0]?.id || "");
+export function GenerateForm({
+  voices,
+  initialVoiceProfileId,
+}: {
+  voices: Voice[];
+  initialVoiceProfileId?: string | null;
+}) {
+  const defaultVoiceId =
+    initialVoiceProfileId && voices.some((v) => v.id === initialVoiceProfileId)
+      ? initialVoiceProfileId
+      : (voices[0]?.id ?? "");
+
+  const [voiceProfileId, setVoiceProfileId] = React.useState<string>(defaultVoiceId);
   const [inputAssetId, setInputAssetId] = React.useState<string | null>(null);
   const [demoTrackId, setDemoTrackId] = React.useState<string>(NO_DEMO);
   const [jobId, setJobId] = React.useState<string | null>(null);

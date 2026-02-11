@@ -148,6 +148,20 @@ export async function GET(req: Request) {
           },
         });
       }
+
+      // Successful training no longer needs checkpoint archive.
+      if (job.datasetAssetId) {
+        const checkpointKey = trainingCheckpointZipKey({
+          userId: session.user.id,
+          voiceProfileId: job.voiceProfileId,
+          datasetAssetId: job.datasetAssetId,
+        });
+        try {
+          await deleteObjects([checkpointKey]);
+        } catch {
+          // Best-effort cleanup only.
+        }
+      }
     } else if (TERMINAL_FAILURE_STATUSES.has(status)) {
       const statusLabel = status === "CANCELED" ? "CANCELLED" : status;
       const errorText = st.error ? safeErrorText(st.error) : null;
