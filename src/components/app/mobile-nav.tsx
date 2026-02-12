@@ -3,13 +3,14 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Mic2, Music3, LayoutDashboard, Settings, Trash2 } from "lucide-react";
+import { Menu, Mic2, Music3, LayoutDashboard, Settings, Trash2, PlusSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 const nav = [
-  { href: "/app/dashboard", label: "Create Voice", icon: LayoutDashboard },
+  { href: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/app/create/new", label: "Create Voice", icon: PlusSquare },
   { href: "/app/voices", label: "Clone Voice", icon: Mic2 },
   { href: "/app/generate", label: "Generate", icon: Music3 },
   { href: "/app/voices/trash", label: "Trash", icon: Trash2 },

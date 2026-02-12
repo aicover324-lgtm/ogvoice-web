@@ -262,6 +262,27 @@ export function GenerateForm({
                     Download Audio
                   </Link>
                 </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="rounded-full cursor-pointer"
+                  disabled={!outputUrl}
+                >
+                  <Link href={outputUrl || "#"} target="_blank">
+                    Open In New Tab
+                  </Link>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-full cursor-pointer"
+                  disabled={!job.outputAssetId}
+                  onClick={() => {
+                    toast.success("Converted audio is already saved to your library.");
+                  }}
+                >
+                  Save To Library
+                </Button>
                 {outputFileName ? <span className="text-xs text-muted-foreground">{outputFileName}</span> : null}
               </div>
             </div>
