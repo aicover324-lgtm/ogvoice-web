@@ -52,6 +52,7 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
   disabledReason?: string;
   requireVoiceProfileId?: boolean;
   hideButton?: boolean;
+  hideList?: boolean;
   buttonLabel?: string;
   ui?: "card" | "minimal";
   suppressSuccessToast?: boolean;
@@ -66,6 +67,7 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
     disabledReason,
     requireVoiceProfileId,
     hideButton,
+    hideList,
     buttonLabel,
     ui,
     suppressSuccessToast,
@@ -259,7 +261,7 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
         onChange={(e) => void onPickFiles(e.target.files)}
       />
 
-      {items.length > 0 ? (
+      {!hideList && items.length > 0 ? (
         <div className={cn(chrome ? "mt-4" : "mt-0", "grid gap-3")}>
           {items.slice(0, 6).map((it) => (
             <div key={it.id} className="rounded-lg border p-3">
