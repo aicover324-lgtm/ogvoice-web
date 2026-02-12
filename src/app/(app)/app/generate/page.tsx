@@ -56,6 +56,16 @@ export default async function GeneratePage({
     outputFileName: j.outputAssetId ? assetById.get(j.outputAssetId) || "converted.wav" : null,
   }));
 
+  const initialLibrary = recentJobsRaw
+    .filter((j) => !!j.outputAssetId)
+    .map((j) => ({
+      jobId: j.id,
+      assetId: j.outputAssetId as string,
+      fileName: assetById.get(j.outputAssetId as string) || "converted.wav",
+      voiceName: j.voiceProfile.name,
+      createdAt: j.createdAt.toISOString(),
+    }));
+
   const requestedVoiceId = typeof params.voiceId === "string" ? params.voiceId : null;
   const initialVoiceId = requestedVoiceId && voices.some((v) => v.id === requestedVoiceId) ? requestedVoiceId : null;
 
@@ -66,7 +76,12 @@ export default async function GeneratePage({
             Clone a voice first, then come back here to convert your singing record.
           </div>
         ) : (
-        <GenerateForm voices={voices} initialVoiceProfileId={initialVoiceId} initialQueue={initialQueue} />
+        <GenerateForm
+          voices={voices}
+          initialVoiceProfileId={initialVoiceId}
+          initialQueue={initialQueue}
+          initialLibrary={initialLibrary}
+        />
         )}
     </main>
   );

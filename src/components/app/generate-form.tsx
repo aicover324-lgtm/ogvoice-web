@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2, CloudUpload, Download, FileAudio, LoaderCircle, Mic, PlusCircle, Share2, Square, X } from "lucide-react";
+import { CheckCircle2, Check, CloudUpload, Download, FileAudio, LoaderCircle, Mic, Pencil, PlusCircle, Share2, Square, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { VoiceCoverThumb } from "@/components/app/voice-cover-thumb";
 import { CustomAudioPlayer } from "@/components/app/custom-audio-player";
 import { DatasetUploader, type DatasetUploaderHandle, type DatasetUploadState } from "@/components/app/dataset-uploader";
@@ -31,6 +32,14 @@ type QueueItem = {
   inputLabel: string;
   outputAssetId?: string | null;
   outputFileName?: string | null;
+};
+
+type LibraryItem = {
+  jobId: string;
+  assetId: string;
+  fileName: string;
+  voiceName: string;
+  createdAt: string;
 };
 
 type UploadPanelState = {
@@ -83,10 +92,12 @@ export function GenerateForm({
   voices,
   initialVoiceProfileId,
   initialQueue,
+  initialLibrary,
 }: {
   voices: Voice[];
   initialVoiceProfileId?: string | null;
   initialQueue: QueueItem[];
+  initialLibrary: LibraryItem[];
 }) {
   const defaultVoiceId =
     initialVoiceProfileId && voices.some((v) => v.id === initialVoiceProfileId)
@@ -101,6 +112,14 @@ export function GenerateForm({
   const [jobId, setJobId] = React.useState<string | null>(null);
   const [job, setJob] = React.useState<GenJob | null>(null);
   const [queue, setQueue] = React.useState<QueueItem[]>(initialQueue);
+  const [library, setLibrary] = React.useState<LibraryItem[]>(initialLibrary);
+  const [selectedLibraryIds, setSelectedLibraryIds] = React.useState<string[]>([]);
+  const [editingAssetId, setEditingAssetId] = React.useState<string | null>(null);
+  const [editingFileName, setEditingFileName] = React.useState("");
+  const [savingAssetId, setSavingAssetId] = React.useState<string | null>(null);
+  const [deletingAssetId, setDeletingAssetId] = React.useState<string | null>(null);
+  const [bulkDeleting, setBulkDeleting] = React.useState(false);
+  const selectionAnchorRef = React.useRef<string | null>(null);
   const [uploadState, setUploadState] = React.useState<UploadPanelState>({
     phase: "idle",
     progress: 0,
@@ -114,6 +133,7 @@ export function GenerateForm({
   );
   const [outputUrl, setOutputUrl] = React.useState<string | null>(null);
   const [outputFileName, setOutputFileName] = React.useState<string | null>(null);
+  const [activeOutputAssetId, setActiveOutputAssetId] = React.useState<string | null>(null);
   const [loadingOutput, setLoadingOutput] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [dragState, setDragState] = React.useState<"idle" | "valid" | "invalid">("idle");
@@ -216,6 +236,7 @@ export function GenerateForm({
     ]);
     setOutputUrl(null);
     setOutputFileName(null);
+    setActiveOutputAssetId(null);
     lastOutputAssetIdRef.current = null;
     toast.success("Conversion started.");
   }
@@ -270,6 +291,7 @@ export function GenerateForm({
 
   const fetchOutputUrl = React.useCallback(async (assetId: string, preferredName?: string | null) => {
     setLoadingOutput(true);
+    setActiveOutputAssetId(assetId);
     try {
       const res = await fetch(`/api/assets/${encodeURIComponent(assetId)}?json=1`, { cache: "no-store" });
       const json = await res.json().catch(() => null);
@@ -301,10 +323,230 @@ export function GenerateForm({
     el.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [activeResultJobId]);
 
+  React.useEffect(() => {
+    setLibrary((prev) => {
+      const byAsset = new Map(prev.map((item) => [item.assetId, item]));
+      for (const q of queue) {
+        if (!q.outputAssetId || q.status !== "succeeded") continue;
+        const existing = byAsset.get(q.outputAssetId);
+        byAsset.set(q.outputAssetId, {
+          jobId: q.id,
+          assetId: q.outputAssetId,
+          fileName: existing?.fileName || q.outputFileName || "converted.wav",
+          voiceName: q.voiceName,
+          createdAt: q.createdAt,
+        });
+      }
+      return Array.from(byAsset.values()).sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+    });
+  }, [queue]);
+
+  React.useEffect(() => {
+    setSelectedLibraryIds((prev) => prev.filter((id) => library.some((item) => item.assetId === id)));
+    if (selectionAnchorRef.current && !library.some((item) => item.assetId === selectionAnchorRef.current)) {
+      selectionAnchorRef.current = null;
+    }
+  }, [library]);
+
   async function openQueueResult(item: QueueItem) {
     if (!item.outputAssetId) return;
     setActiveResultJobId(item.id);
     await fetchOutputUrl(item.outputAssetId, item.outputFileName || null);
+  }
+
+  function beginRenameLibraryItem(item: LibraryItem) {
+    setEditingAssetId(item.assetId);
+    setEditingFileName(item.fileName);
+  }
+
+  function cancelRenameLibraryItem() {
+    setEditingAssetId(null);
+    setEditingFileName("");
+  }
+
+  async function saveRenameLibraryItem(assetId: string) {
+    const nextName = editingFileName.trim();
+    if (!nextName) {
+      toast.error("File name cannot be empty.");
+      return;
+    }
+    setSavingAssetId(assetId);
+    try {
+      const res = await fetch("/api/generate/library", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assetId, fileName: nextName }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error?.message || "Could not rename file.");
+      }
+      const updatedName = String(json.data.fileName || nextName);
+      setLibrary((prev) => prev.map((item) => (item.assetId === assetId ? { ...item, fileName: updatedName } : item)));
+      setQueue((prev) =>
+        prev.map((item) =>
+          item.outputAssetId === assetId
+            ? {
+                ...item,
+                outputFileName: updatedName,
+              }
+            : item
+        )
+      );
+      if (activeOutputAssetId === assetId) setOutputFileName(updatedName);
+      setEditingAssetId(null);
+      setEditingFileName("");
+      toast.success("File name updated.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not rename file.");
+    } finally {
+      setSavingAssetId(null);
+    }
+  }
+
+  async function deleteLibraryItem(item: LibraryItem) {
+    const confirmed = window.confirm(`Delete \"${item.fileName}\" from your library?`);
+    if (!confirmed) return;
+
+    setDeletingAssetId(item.assetId);
+    try {
+      const res = await fetch("/api/generate/library", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assetId: item.assetId }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error?.message || "Could not delete file.");
+      }
+
+      setLibrary((prev) => prev.filter((entry) => entry.assetId !== item.assetId));
+      setQueue((prev) =>
+        prev.map((entry) =>
+          entry.outputAssetId === item.assetId
+            ? {
+                ...entry,
+                outputAssetId: null,
+                outputFileName: null,
+              }
+            : entry
+        )
+      );
+
+      if (activeOutputAssetId === item.assetId) {
+        setActiveOutputAssetId(null);
+        setOutputUrl(null);
+        setOutputFileName(null);
+        lastOutputAssetIdRef.current = null;
+      }
+
+      toast.success("File removed from library.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete file.");
+    } finally {
+      setDeletingAssetId(null);
+    }
+  }
+
+  function toggleLibrarySelection(assetId: string, withRange: boolean) {
+    setSelectedLibraryIds((prev) => {
+      const orderedIds = library.map((item) => item.assetId);
+      const clickedIndex = orderedIds.indexOf(assetId);
+      if (clickedIndex < 0) return prev;
+
+      const prevSet = new Set(prev);
+      const clickedSelected = prevSet.has(assetId);
+      const nextSelectState = !clickedSelected;
+      const anchorId = selectionAnchorRef.current;
+
+      if (withRange && anchorId) {
+        const anchorIndex = orderedIds.indexOf(anchorId);
+        if (anchorIndex >= 0) {
+          const [start, end] = anchorIndex < clickedIndex ? [anchorIndex, clickedIndex] : [clickedIndex, anchorIndex];
+          const range = orderedIds.slice(start, end + 1);
+          for (const id of range) {
+            if (nextSelectState) prevSet.add(id);
+            else prevSet.delete(id);
+          }
+          return orderedIds.filter((id) => prevSet.has(id));
+        }
+      }
+
+      if (nextSelectState) prevSet.add(assetId);
+      else prevSet.delete(assetId);
+      return orderedIds.filter((id) => prevSet.has(id));
+    });
+
+    selectionAnchorRef.current = assetId;
+  }
+
+  function onLibraryCheckboxClick(e: React.MouseEvent<HTMLInputElement>, assetId: string) {
+    e.preventDefault();
+    toggleLibrarySelection(assetId, e.shiftKey);
+  }
+
+  function selectAllLibraryItems() {
+    setSelectedLibraryIds(library.map((item) => item.assetId));
+    selectionAnchorRef.current = library[0]?.assetId ?? null;
+  }
+
+  function clearLibrarySelection() {
+    setSelectedLibraryIds([]);
+    selectionAnchorRef.current = null;
+  }
+
+  async function bulkDeleteLibraryItems() {
+    if (selectedLibraryIds.length === 0) return;
+    const confirmed = window.confirm(`Delete ${selectedLibraryIds.length} selected tracks from your library?`);
+    if (!confirmed) return;
+
+    setBulkDeleting(true);
+    let successCount = 0;
+
+    for (const assetId of selectedLibraryIds) {
+      try {
+        const res = await fetch("/api/generate/library", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ assetId }),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json?.ok) continue;
+
+        successCount += 1;
+        setLibrary((prev) => prev.filter((entry) => entry.assetId !== assetId));
+        setQueue((prev) =>
+          prev.map((entry) =>
+            entry.outputAssetId === assetId
+              ? {
+                  ...entry,
+                  outputAssetId: null,
+                  outputFileName: null,
+                }
+              : entry
+          )
+        );
+
+        if (activeOutputAssetId === assetId) {
+          setActiveOutputAssetId(null);
+          setOutputUrl(null);
+          setOutputFileName(null);
+          lastOutputAssetIdRef.current = null;
+        }
+      } catch {
+        // keep deleting remaining items
+      }
+    }
+
+    setSelectedLibraryIds([]);
+    selectionAnchorRef.current = null;
+    setBulkDeleting(false);
+
+    if (successCount > 0) {
+      toast.success(`${successCount} track${successCount > 1 ? "s" : ""} removed.`);
+    } else {
+      toast.error("Could not delete selected tracks.");
+    }
   }
 
   async function startLiveRecording() {
@@ -400,9 +642,12 @@ export function GenerateForm({
   }, [queue]);
   const dailyLimit = 50;
   const canCreateCover = !!inputAssetId && !uploadBusy && !recordingBusy && !loading;
+  const selectedLibraryCount = selectedLibraryIds.length;
+  const allLibrarySelected = library.length > 0 && selectedLibraryCount === library.length;
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
+    <div className="space-y-6">
+      <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
       <aside className="min-w-0 rounded-2xl border border-white/10 bg-[#11172b]">
         <div className="border-b border-white/10 p-4">
           <div className="mb-3 flex items-center justify-between">
@@ -988,6 +1233,161 @@ export function GenerateForm({
           </div>
         </div>
       </aside>
+      </div>
+
+      <section className="rounded-2xl border border-white/10 bg-[#101a35] p-4 md:p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-xl font-semibold tracking-tight text-white" style={{ fontFamily: "var(--font-heading)" }}>
+              My Library
+            </h3>
+            <p className="mt-1 text-sm text-slate-300">Manage your generated tracks: open, rename, download, or remove.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {library.length > 0 ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-lg border-white/20 bg-white/5 text-slate-100 hover:bg-white/10"
+                  onClick={allLibrarySelected ? clearLibrarySelection : selectAllLibraryItems}
+                >
+                  {allLibrarySelected ? "Clear selection" : "Select all"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-lg border-red-300/30 bg-red-500/10 text-red-200 hover:bg-red-500/20 disabled:pointer-events-auto disabled:cursor-not-allowed"
+                  disabled={selectedLibraryCount === 0 || bulkDeleting}
+                  onClick={() => {
+                    void bulkDeleteLibraryItems();
+                  }}
+                >
+                  <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                  Delete selected ({selectedLibraryCount})
+                </Button>
+              </>
+            ) : null}
+            <Badge variant="secondary" className="bg-white/10 text-slate-100">{library.length} tracks</Badge>
+          </div>
+        </div>
+
+        {library.length === 0 ? (
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-300">
+            No tracks in your library yet. Create a cover to see it here.
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {library.map((item) => {
+              const isEditing = editingAssetId === item.assetId;
+              const busy = savingAssetId === item.assetId || deletingAssetId === item.assetId || bulkDeleting;
+              const selected = selectedLibraryIds.includes(item.assetId);
+              return (
+                <div key={item.assetId} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                  {isEditing ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={editingFileName}
+                        onChange={(e) => setEditingFileName(e.target.value)}
+                        className="h-9 border-white/15 bg-white/5 text-slate-100"
+                        maxLength={180}
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        className="h-9 w-9 rounded-lg cursor-pointer"
+                        disabled={busy}
+                        onClick={() => void saveRenameLibraryItem(item.assetId)}
+                        title="Save"
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 rounded-lg cursor-pointer"
+                        disabled={busy}
+                        onClick={cancelRenameLibraryItem}
+                        title="Cancel"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex min-w-0 items-start gap-2">
+                        <label className="mt-0.5 inline-flex cursor-pointer items-center">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 cursor-pointer rounded border-white/20 bg-white/5 accent-cyan-400"
+                            checked={selected}
+                            onClick={(e) => onLibraryCheckboxClick(e, item.assetId)}
+                            onChange={() => {
+                              // handled in onClick for shift-range support
+                            }}
+                            disabled={busy}
+                          />
+                        </label>
+                        <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-slate-100">{item.fileName}</div>
+                        <div className="mt-0.5 text-xs text-slate-400">{item.voiceName} · {formatAgo(item.createdAt)}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 rounded-lg border-white/20 bg-white/5 text-slate-100 hover:bg-white/10"
+                          onClick={() => {
+                            setActiveResultJobId(item.jobId);
+                            void fetchOutputUrl(item.assetId, item.fileName);
+                          }}
+                        >
+                          Open
+                        </Button>
+                        <Button asChild variant="outline" size="sm" className="h-8 rounded-lg border-white/20 bg-white/5 text-slate-100 hover:bg-white/10">
+                          <Link href={`/api/assets/${encodeURIComponent(item.assetId)}`} target="_blank">
+                            <Download className="mr-1.5 h-3.5 w-3.5" />
+                            Download
+                          </Link>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 rounded-lg border-white/20 bg-white/5 text-slate-100 hover:bg-white/10"
+                          onClick={() => beginRenameLibraryItem(item)}
+                          disabled={busy}
+                          title="Rename"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 rounded-lg border-red-300/30 bg-red-500/10 text-red-200 hover:bg-red-500/20"
+                          onClick={() => {
+                            void deleteLibraryItem(item);
+                          }}
+                          disabled={busy}
+                          title="Delete"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
