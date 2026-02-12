@@ -50,7 +50,7 @@ export function CloneVoiceSections({ voices }: { voices: VoiceCloneCardData[] })
   );
 
   return (
-    <div className="mt-8 space-y-10">
+    <div className="mt-6 space-y-8">
       <section>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <SummaryTile label="Ready To Clone" value={readyVoices.length} />
@@ -59,13 +59,16 @@ export function CloneVoiceSections({ voices }: { voices: VoiceCloneCardData[] })
         </div>
       </section>
 
-      <section>
+      <section className="rounded-2xl border border-white/10 bg-[#0f1831] p-4 md:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
-            Ready To Clone Voices
+          <h2 className="text-lg font-semibold tracking-tight text-white" style={{ fontFamily: "var(--font-heading)" }}>
+            Continue Cloning
           </h2>
-          <span className="og-chip-soft">{readyVoices.length}</span>
+          <span className="inline-flex items-center rounded-full border border-cyan-400/40 bg-cyan-400/10 px-2.5 py-1 text-xs font-semibold text-cyan-200">
+            {readyVoices.length}
+          </span>
         </div>
+        <p className="mt-1 text-sm text-slate-300">Pick a voice below, check status, and start cloning in one click.</p>
 
         <div className="mt-3 flex flex-wrap gap-2">
           <FilterChip
@@ -97,13 +100,16 @@ export function CloneVoiceSections({ voices }: { voices: VoiceCloneCardData[] })
         <VoiceGrid items={filteredReadyVoices} emptyText="No voices match this filter." />
       </section>
 
-      <section>
+      <section className="rounded-2xl border border-white/10 bg-[#0f1831] p-4 md:p-5">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
-            Cloned Voices
+          <h2 className="text-lg font-semibold tracking-tight text-white" style={{ fontFamily: "var(--font-heading)" }}>
+            Ready Voices
           </h2>
-          <span className="og-chip-soft">{clonedVoices.length}</span>
+          <span className="inline-flex items-center rounded-full border border-fuchsia-400/40 bg-fuchsia-500/10 px-2.5 py-1 text-xs font-semibold text-fuchsia-200">
+            {clonedVoices.length}
+          </span>
         </div>
+        <p className="mt-1 text-sm text-slate-300">These voices are ready to use in Generate.</p>
         <VoiceGrid items={clonedVoices} emptyText="No cloned voices yet." showUseAction />
       </section>
     </div>
@@ -127,9 +133,9 @@ function VoiceGrid({
   showUseAction?: boolean;
 }) {
   return (
-    <div className="mt-4 grid auto-rows-fr gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="mt-4 grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-3">
       {items.length === 0 ? (
-        <div className="text-sm text-muted-foreground">{emptyText}</div>
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-300">{emptyText}</div>
       ) : (
         items.map((v) => <VoiceCloneCard key={v.id} voice={v} showUseAction={showUseAction} />)
       )}
@@ -139,9 +145,9 @@ function VoiceGrid({
 
 function SummaryTile({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl border border-black/10 bg-background/40 px-4 py-3 dark:border-white/10">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="mt-1 text-xl font-semibold tracking-tight">{value}</div>
+    <div className="rounded-xl border border-white/10 bg-[#101b37] px-4 py-3">
+      <div className="text-xs uppercase tracking-[0.12em] text-slate-400">{label}</div>
+      <div className="mt-1 text-xl font-semibold tracking-tight text-slate-100">{value}</div>
     </div>
   );
 }
@@ -165,11 +171,11 @@ function FilterChip({
         "inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
         active
           ? "border-cyan-400/45 bg-cyan-500/12 text-cyan-300"
-          : "border-black/10 bg-background/40 text-muted-foreground hover:border-black/20 hover:text-foreground dark:border-white/10 dark:hover:border-white/20"
+          : "border-white/15 bg-white/[0.03] text-slate-300 hover:border-white/30 hover:text-slate-100"
       )}
     >
       <span>{label}</span>
-      <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[10px] leading-none dark:bg-white/15">{count}</span>
+      <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] leading-none">{count}</span>
     </button>
   );
 }

@@ -19,6 +19,7 @@ export default async function VoicesPage() {
         select: {
           id: true,
           status: true,
+          progress: true,
           artifactKey: true,
           errorMessage: true,
         },
@@ -35,6 +36,7 @@ export default async function VoicesPage() {
       ? {
           id: v.trainingJobs[0].id,
           status: v.trainingJobs[0].status,
+          progress: v.trainingJobs[0].progress,
           artifactKey: v.trainingJobs[0].artifactKey,
           errorMessage: v.trainingJobs[0].errorMessage,
         }
@@ -45,8 +47,16 @@ export default async function VoicesPage() {
     <main className="og-app-main">
       <PageHeader title="Clone Voice" />
 
+      <section className="mt-4 rounded-2xl border border-white/10 bg-[#0f1831] p-4 md:p-5">
+        <p className="text-sm text-slate-200">
+          Create and manage your cloned voices here. Upload a singing record, start cloning, and use ready voices in Generate.
+        </p>
+      </section>
+
       {cards.length === 0 ? (
-        <div className="mt-8 text-sm text-muted-foreground">No voices yet. Create one from the Create Voice tab.</div>
+        <div className="mt-8 rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-300">
+          No voices yet. Create one from the Create Voice tab.
+        </div>
       ) : (
         <CloneVoiceSections voices={cards} />
       )}

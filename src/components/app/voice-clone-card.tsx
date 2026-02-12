@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { PremiumCard } from "@/components/app/premium-card";
 import { VoiceActionsMenu } from "@/components/app/voice-actions-menu";
 import { VoiceCoverHero } from "@/components/app/voice-cover-hero";
+import { VoiceCoverThumb } from "@/components/app/voice-cover-thumb";
 import { CloneVoicePanel, type CloneTrainingStatus } from "@/components/app/clone-voice-panel";
 
 export type VoiceCloneCardData = {
@@ -19,6 +20,7 @@ export type VoiceCloneCardData = {
     | {
         id: string;
         status: CloneTrainingStatus;
+        progress: number;
         artifactKey: string | null;
         errorMessage: string | null;
       }
@@ -57,11 +59,21 @@ export function VoiceCloneCard({ voice, showUseAction }: { voice: VoiceCloneCard
 
   return (
     <PremiumCard
-      className="h-full min-h-[520px] p-5"
+      className="h-full min-h-[560px] border-white/10 bg-[#101a35] p-4 text-slate-100"
       contentClassName="flex h-full flex-col"
+      ringClassName="ring-white/10"
       overlay={overlay}
     >
-      <div className="mb-3 flex justify-end">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <VoiceCoverThumb voiceId={voice.id} size={40} />
+          <div className="min-w-0">
+            <div className="truncate text-base font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
+              {meta.name}
+            </div>
+            <div className="truncate text-xs text-slate-400">{meta.language || "Language not set"}</div>
+          </div>
+        </div>
         <VoiceActionsMenu
           voiceId={voice.id}
           initialName={meta.name}
@@ -79,19 +91,26 @@ export function VoiceCloneCard({ voice, showUseAction }: { voice: VoiceCloneCard
       <VoiceCoverHero voiceId={voice.id} nonce={nonce} />
 
       <div className="mt-4">
-        <div className="text-base font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
-          {meta.name}
-        </div>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">{meta.language || "Language"}</Badge>
-          <Badge variant={voice.hasDataset ? "secondary" : "outline"}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant={voice.hasDataset ? "secondary" : "outline"} className={voice.hasDataset ? "bg-white/10 text-slate-100" : "border-white/20 text-slate-300"}>
             {voice.hasDataset ? "singing record ready" : "missing singing record"}
           </Badge>
+          <span className={statusPillClass(cloneState)}>{statusPillLabel(cloneState)}</span>
           {failedHint ? <Badge variant="destructive">{failedHint}</Badge> : null}
         </div>
 
-        <div className="mt-3 line-clamp-3 min-h-[60px] text-sm text-muted-foreground">
-          {meta.description || "No notes"}
+        <div className="mt-3 line-clamp-3 min-h-[60px] text-sm text-slate-300">
+          {meta.description || "No notes yet. Add a short description from the menu."}
+        </div>
+
+        <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <div className="mb-2 flex items-center justify-between gap-2 text-xs">
+            <span className="font-semibold uppercase tracking-[0.08em] text-slate-400">Cloning status</span>
+            <span className="font-semibold text-cyan-200">{statusPillLabel(cloneState)}</span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+            <div className={statusProgressClass(cloneState)} style={{ width: `${statusProgressWidth(cloneState)}%` }} />
+          </div>
         </div>
       </div>
 
@@ -103,11 +122,12 @@ export function VoiceCloneCard({ voice, showUseAction }: { voice: VoiceCloneCard
           onVisualStateChange={setCloneState}
           initialJobId={voice.latestTrainingJob?.id ?? null}
           initialStatus={voice.latestTrainingJob?.status ?? null}
+          initialProgress={voice.latestTrainingJob?.progress ?? 0}
           initialArtifactKey={voice.latestTrainingJob?.artifactKey ?? null}
           initialErrorMessage={voice.latestTrainingJob?.errorMessage ?? null}
         />
         {showUseAction && cloneState === "cloned" ? (
-          <Button asChild variant="outline" className="mt-2 w-full rounded-full cursor-pointer">
+          <Button asChild variant="outline" className="mt-2 w-full rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer">
             <Link href={`/app/generate?voiceId=${encodeURIComponent(voice.id)}`}>Use This Voice</Link>
           </Button>
         ) : null}
@@ -133,4 +153,32 @@ function toFailedHint(errorMessage: string | null) {
     return "temporary issue";
   }
   return "needs retry";
+}
+
+function statusPillLabel(state: CardCloneVisualState) {
+  if (state === "cloning") return "Cloning now";
+  if (state === "cloned") return "Ready";
+  if (state === "failed") return "Needs retry";
+  return "Not started";
+}
+
+function statusPillClass(state: CardCloneVisualState) {
+  const base = "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold";
+  if (state === "cloning") return `${base} border-cyan-400/45 bg-cyan-400/10 text-cyan-200`;
+  if (state === "cloned") return `${base} border-fuchsia-400/45 bg-fuchsia-500/15 text-fuchsia-200`;
+  if (state === "failed") return `${base} border-red-400/40 bg-red-400/10 text-red-200`;
+  return `${base} border-white/20 bg-white/5 text-slate-300`;
+}
+
+function statusProgressClass(state: CardCloneVisualState) {
+  if (state === "failed") return "h-full rounded-full bg-red-400";
+  if (state === "cloned") return "h-full rounded-full bg-fuchsia-400";
+  return "h-full rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-400";
+}
+
+function statusProgressWidth(state: CardCloneVisualState) {
+  if (state === "cloned") return 100;
+  if (state === "cloning") return 58;
+  if (state === "failed") return 28;
+  return 8;
 }
