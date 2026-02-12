@@ -489,8 +489,12 @@ export function GenerateForm({
             void uploaderRef.current?.uploadFiles([file]);
           }}
           className={cn(
-            "rounded-2xl border-2 border-dashed bg-[#171d33] p-10 text-center transition-colors",
-            dragState === "valid" ? "border-cyan-400/70" : dragState === "invalid" ? "border-red-500/60" : "border-white/20",
+            "rounded-2xl bg-[#171d33] p-10 text-center transition-colors",
+            dragState === "valid"
+              ? "border-2 border-dashed border-cyan-400/70"
+              : dragState === "invalid"
+                ? "border-2 border-dashed border-red-500/60"
+                : "border border-transparent",
             dragState === "invalid" || uploadPanelBlocked ? "cursor-not-allowed" : "cursor-pointer",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
           )}
@@ -781,7 +785,7 @@ export function GenerateForm({
               </div>
             </div>
 
-            <div className="mt-6 flex items-center justify-end gap-3 border-t border-white/10 pt-5">
+            <div className="mt-6 flex items-center justify-end gap-3 pt-5">
               <Button
                 className={cn(
                   "rounded-xl px-8 disabled:pointer-events-auto disabled:cursor-not-allowed",
@@ -974,7 +978,7 @@ export function GenerateForm({
           </div>
         </div>
 
-        <div className="border-t border-white/10 bg-white/5 p-5">
+        <div className="bg-white/5 p-5">
           <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
             <span>Daily Generation Limit</span>
             <span className="font-semibold text-cyan-300">
