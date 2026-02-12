@@ -32,9 +32,13 @@ export const CustomAudioPlayer = React.forwardRef<HTMLAudioElement, CustomAudioP
       if (!audio) return;
 
       const onLoaded = () => {
-        setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
+        setDuration(resolveDuration(audio));
       };
-      const onTime = () => setCurrentTime(audio.currentTime || 0);
+      const onTime = () => {
+        setCurrentTime(audio.currentTime || 0);
+        const d = resolveDuration(audio);
+        if (d > 0) setDuration(d);
+      };
       const onPlay = () => {
         setPlaying(true);
         onPlayStateChange?.(true);
@@ -50,9 +54,14 @@ export const CustomAudioPlayer = React.forwardRef<HTMLAudioElement, CustomAudioP
       const onRate = () => {
         setSpeed(audio.playbackRate || 1);
       };
+      const onDurationChange = () => {
+        setDuration(resolveDuration(audio));
+      };
 
       audio.addEventListener("loadedmetadata", onLoaded);
+      audio.addEventListener("loadeddata", onLoaded);
       audio.addEventListener("timeupdate", onTime);
+      audio.addEventListener("durationchange", onDurationChange);
       audio.addEventListener("play", onPlay);
       audio.addEventListener("pause", onPause);
       audio.addEventListener("ended", onPause);
@@ -61,7 +70,9 @@ export const CustomAudioPlayer = React.forwardRef<HTMLAudioElement, CustomAudioP
 
       return () => {
         audio.removeEventListener("loadedmetadata", onLoaded);
+        audio.removeEventListener("loadeddata", onLoaded);
         audio.removeEventListener("timeupdate", onTime);
+        audio.removeEventListener("durationchange", onDurationChange);
         audio.removeEventListener("play", onPlay);
         audio.removeEventListener("pause", onPause);
         audio.removeEventListener("ended", onPause);
@@ -91,8 +102,9 @@ export const CustomAudioPlayer = React.forwardRef<HTMLAudioElement, CustomAudioP
 
     function seekTo(percent: number) {
       const audio = audioRef.current;
-      if (!audio || duration <= 0) return;
-      const next = (Math.max(0, Math.min(100, percent)) / 100) * duration;
+      const d = audio ? resolveDuration(audio) : 0;
+      if (!audio || d <= 0) return;
+      const next = (Math.max(0, Math.min(100, percent)) / 100) * d;
       audio.currentTime = next;
       setCurrentTime(next);
     }
@@ -252,4 +264,15 @@ function formatTime(sec: number) {
   const m = Math.floor(total / 60);
   const s = total % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function resolveDuration(audio: HTMLAudioElement) {
+  const d = audio.duration;
+  if (Number.isFinite(d) && d > 0) return d;
+  const seekable = audio.seekable;
+  if (seekable && seekable.length > 0) {
+    const end = seekable.end(seekable.length - 1);
+    if (Number.isFinite(end) && end > 0) return end;
+  }
+  return 0;
 }
