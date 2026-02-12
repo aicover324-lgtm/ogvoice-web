@@ -43,7 +43,7 @@ type UploadPanelState = {
 
 type DebugBorderRow = {
   id: string;
-  kind: "container" | "hairline";
+  kind: "border" | "hairline" | "pseudo";
   color: string;
   tag: string;
   position: string;
@@ -144,6 +144,7 @@ export function GenerateForm({
   const queueItemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const lastOutputAssetIdRef = React.useRef<string | null>(null);
   const [debugBorders, setDebugBorders] = React.useState<DebugBorderRow[]>([]);
+  const debugBorderRows = debugBorders.slice(0, 300);
 
   const selectedVoice = React.useMemo(() => voices.find((v) => v.id === voiceProfileId) || null, [voiceProfileId, voices]);
   const uploadBusy =
@@ -416,56 +417,128 @@ export function GenerateForm({
   const canCreateCover = !!inputAssetId && !uploadBusy && !recordingBusy && !loading;
 
   React.useEffect(() => {
-    const all = Array.from(document.body.querySelectorAll<HTMLElement>("*"));
-    const rows: DebugBorderRow[] = [];
-    const skipTags = new Set(["BUTTON", "A", "SPAN", "SVG", "PATH", "INPUT", "AUDIO", "TH", "TD", "TR", "TBODY", "THEAD", "TABLE"]);
+    const parsePx = (value: string) => Number.parseFloat(value || "0") || 0;
+    const styleTagId = "og-generate-debug-pseudo-style";
 
-    for (const el of all) {
-      if (skipTags.has(el.tagName)) continue;
-      const style = window.getComputedStyle(el);
-      const hasBorderClass = (el.className || "").toString().includes("border");
-      const borderWidth =
-        Number.parseFloat(style.borderTopWidth || "0") +
-        Number.parseFloat(style.borderRightWidth || "0") +
-        Number.parseFloat(style.borderBottomWidth || "0") +
-        Number.parseFloat(style.borderLeftWidth || "0");
-      if (!hasBorderClass && borderWidth <= 0) continue;
+    const ensurePseudoStyleTag = () => {
+      if (document.getElementById(styleTagId)) return;
+      const style = document.createElement("style");
+      style.id = styleTagId;
+      style.textContent = `
+        [data-debug-border-id]::before,
+        [data-debug-border-id]::after {
+          border-color: var(--og-debug-border-color) !important;
+          outline: 2px solid var(--og-debug-border-color) !important;
+        }
+      `;
+      document.head.appendChild(style);
+    };
 
-      const rect = el.getBoundingClientRect();
-      const isHairline =
-        rect.width >= window.innerWidth * 0.6 &&
-        rect.height <= 8 &&
-        (borderWidth > 0 || style.backgroundColor !== "rgba(0, 0, 0, 0)" || style.boxShadow !== "none");
+    const clearPreviousDebugPaint = () => {
+      const painted = document.querySelectorAll<HTMLElement>("[data-debug-border-id]");
+      for (const el of painted) {
+        el.style.removeProperty("outline");
+        el.style.removeProperty("outline-offset");
+        el.style.removeProperty("border-color");
+        el.style.removeProperty("--og-debug-border-color");
+        el.style.removeProperty("box-shadow");
+        el.removeAttribute("data-debug-border-id");
+      }
+    };
 
-      const isContainer = rect.width >= 220 && rect.height >= 56;
-      if (!isHairline && !isContainer) continue;
-      if (isContainer && rect.width > window.innerWidth * 0.98 && rect.height > window.innerHeight * 0.95) continue;
-      if ((el.className || "").toString().includes("Generate Border Debug Table")) continue;
+    const pseudoLooksLikeLine = (style: CSSStyleDeclaration) => {
+      const content = style.content;
+      if (!content || content === "none") return false;
+      const pseudoBorder = parsePx(style.borderTopWidth) + parsePx(style.borderRightWidth) + parsePx(style.borderBottomWidth) + parsePx(style.borderLeftWidth);
+      const pseudoHeight = parsePx(style.height);
+      const pseudoBg = style.backgroundColor;
+      return pseudoBorder > 0 || (pseudoHeight > 0 && pseudoHeight <= 8 && pseudoBg !== "rgba(0, 0, 0, 0)") || style.boxShadow !== "none";
+    };
 
-      const id = `dbg-${rows.length + 1}`;
-      const hue = Math.floor(Math.random() * 360);
-      const color = `hsl(${hue} 100% 50%)`;
+    const run = () => {
+      ensurePseudoStyleTag();
+      clearPreviousDebugPaint();
 
-      el.dataset.debugBorderId = id;
-      el.style.setProperty("outline", `4px solid ${color}`, "important");
-      el.style.setProperty("outline-offset", "-2px", "important");
+      const all = Array.from(document.body.querySelectorAll<HTMLElement>("*"));
+      const rows: DebugBorderRow[] = [];
+      const skipTags = new Set(["SCRIPT", "STYLE", "META", "LINK", "NOSCRIPT"]);
 
-      rows.push({
-        id,
-        kind: isHairline ? "hairline" : "container",
-        color,
-        tag: el.tagName,
-        position: style.position,
-        top: Math.round(rect.top),
-        bottom: Math.round(rect.bottom),
-        width: Math.round(rect.width),
-        height: Math.round(rect.height),
-        className: (el.className || "").toString().slice(0, 140),
-      });
-    }
+      for (const el of all) {
+        if (skipTags.has(el.tagName)) continue;
+        if (el.closest("[data-debug-panel='true']")) continue;
 
-    setDebugBorders(rows);
-  }, [queue, voices]);
+        const style = window.getComputedStyle(el);
+        const hasBorderClass = (el.className || "").toString().includes("border");
+        const borderWidth =
+          parsePx(style.borderTopWidth) +
+          parsePx(style.borderRightWidth) +
+          parsePx(style.borderBottomWidth) +
+          parsePx(style.borderLeftWidth);
+        const rect = el.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) continue;
+
+        const pseudoBefore = window.getComputedStyle(el, "::before");
+        const pseudoAfter = window.getComputedStyle(el, "::after");
+        const pseudoLine = pseudoLooksLikeLine(pseudoBefore) || pseudoLooksLikeLine(pseudoAfter);
+
+        const hairline =
+          rect.width >= window.innerWidth * 0.4 &&
+          rect.height <= 4 &&
+          (borderWidth > 0 || style.backgroundColor !== "rgba(0, 0, 0, 0)" || style.boxShadow !== "none");
+
+        const shouldMark = borderWidth > 0 || hasBorderClass || hairline || pseudoLine;
+        if (!shouldMark) continue;
+
+        const id = `dbg-${rows.length + 1}`;
+        const hue = (rows.length * 41) % 360;
+        const color = `hsl(${hue} 100% 50%)`;
+
+        el.dataset.debugBorderId = id;
+        el.style.setProperty("--og-debug-border-color", color);
+        el.style.setProperty("outline", `3px solid ${color}`, "important");
+        el.style.setProperty("outline-offset", "-1px", "important");
+        if (borderWidth > 0 || hasBorderClass) {
+          el.style.setProperty("border-color", color, "important");
+        }
+        if (hairline && borderWidth <= 0) {
+          el.style.setProperty("box-shadow", `inset 0 0 0 2px ${color}`, "important");
+        }
+
+        rows.push({
+          id,
+          kind: pseudoLine ? "pseudo" : hairline ? "hairline" : "border",
+          color,
+          tag: el.tagName,
+          position: style.position,
+          top: Math.round(rect.top),
+          bottom: Math.round(rect.bottom),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+          className: (el.className || "").toString().slice(0, 140),
+        });
+      }
+
+      setDebugBorders(rows);
+    };
+
+    let raf = 0;
+    const schedule = () => {
+      if (raf) window.cancelAnimationFrame(raf);
+      raf = window.requestAnimationFrame(run);
+    };
+
+    run();
+    const obs = new MutationObserver(schedule);
+    obs.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["class"] });
+    window.addEventListener("resize", schedule);
+
+    return () => {
+      obs.disconnect();
+      window.removeEventListener("resize", schedule);
+      if (raf) window.cancelAnimationFrame(raf);
+      clearPreviousDebugPaint();
+    };
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -1061,9 +1134,12 @@ export function GenerateForm({
       </aside>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#11172b] p-4">
+      <div data-debug-panel="true" className="overflow-x-auto rounded-2xl border border-white/10 bg-[#11172b] p-4">
         <div className="mb-3 text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
-          Generate Border Debug Table (Containers + Hairlines)
+          Generate Border Debug Table (All Borders)
+        </div>
+        <div className="mb-3 text-xs text-muted-foreground">
+          Total matched elements: {debugBorders.length} (showing first {debugBorderRows.length})
         </div>
         <table className="w-full min-w-[760px] text-left text-xs">
           <thead className="text-muted-foreground">
@@ -1079,7 +1155,7 @@ export function GenerateForm({
             </tr>
           </thead>
           <tbody>
-            {debugBorders.map((row) => (
+            {debugBorderRows.map((row) => (
               <tr key={row.id} className="border-t border-white/10 align-top">
                 <td className="px-2 py-1 font-mono">{row.id}</td>
                 <td className="px-2 py-1 font-mono uppercase">{row.kind}</td>
