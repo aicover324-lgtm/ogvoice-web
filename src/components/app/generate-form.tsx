@@ -441,12 +441,7 @@ export function GenerateForm({
       </aside>
 
       <section className="min-w-0 space-y-5">
-        <button
-          type="button"
-          onClick={() => {
-            if (uploadPanelBlocked) return;
-            uploaderRef.current?.openPicker();
-          }}
+        <fieldset
           onDragEnter={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -511,13 +506,50 @@ export function GenerateForm({
           </p>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <span className={cn("inline-flex h-10 items-center rounded-xl px-7 text-sm font-semibold", uploadBusy ? "border border-white/20 bg-white/5 text-slate-300" : "og-btn-gradient")}>
+            <button
+              type="button"
+              disabled={uploadPanelBlocked}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploaderRef.current?.openPicker();
+              }}
+              className={cn(
+                "inline-flex h-10 items-center rounded-xl px-7 text-sm font-semibold disabled:pointer-events-auto disabled:cursor-not-allowed",
+                uploadPanelBlocked ? "border border-white/20 bg-white/5 text-slate-300" : "og-btn-gradient cursor-pointer"
+              )}
+            >
               {uploadBusy ? "Uploading..." : "Select File"}
-            </span>
-            <span className="inline-flex h-10 items-center rounded-xl border border-white/15 bg-white/5 px-7 text-sm font-semibold text-muted-foreground">
-              Record Live
-            </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (recording) {
+                  stopLiveRecording();
+                  return;
+                }
+                void startLiveRecording();
+              }}
+              disabled={!recordSupported || uploadBusy || recordingStarting}
+              className={cn(
+                "inline-flex h-10 items-center rounded-xl border px-7 text-sm font-semibold disabled:pointer-events-auto disabled:cursor-not-allowed",
+                recording
+                  ? "cursor-pointer border-red-300/40 bg-red-500/20 text-red-100"
+                  : "cursor-pointer border-cyan-300/35 bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/20",
+                !recordSupported || uploadBusy || recordingStarting
+                  ? "border-white/15 bg-white/5 text-slate-500"
+                  : ""
+              )}
+            >
+              {recording ? <Square className="mr-2 h-4 w-4" /> : <Mic className="mr-2 h-4 w-4" />}
+              {recording ? "Stop Recording" : recordingStarting ? "Starting mic..." : "Record Live"}
+            </button>
           </div>
+
+          {recording ? <div className="mt-3 text-xs font-medium text-cyan-200">Recording... {formatClock(recordingElapsedSec)}</div> : null}
 
           {uploadState.phase !== "idle" ? (
             <div className="mx-auto mt-5 max-w-xl text-left">
@@ -565,39 +597,7 @@ export function GenerateForm({
             {inputFileName ? `Selected: ${inputFileName}` : "No singing record selected yet."}
           </div>
           {inputAssetId ? <Badge className="mt-3">Singing record ready</Badge> : null}
-        </button>
-
-        <div className="rounded-2xl border border-white/10 bg-[#171d33] p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="text-sm text-slate-300">
-              {recordSupported
-                ? recording
-                  ? `Recording... ${formatClock(recordingElapsedSec)}`
-                  : "Record with your microphone and use it instantly."
-                : "Live recording is not available in this browser."}
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              className={cn(
-                "rounded-full border-white/20 bg-white/5 text-slate-100 disabled:pointer-events-auto disabled:cursor-not-allowed",
-                recording ? "hover:bg-red-500/20 hover:text-red-100" : "hover:bg-white/10"
-              )}
-              disabled={!recordSupported || uploadBusy || recordingStarting}
-              onClick={() => {
-                if (recording) {
-                  stopLiveRecording();
-                  return;
-                }
-                void startLiveRecording();
-              }}
-            >
-              {recording ? <Square className="mr-2 h-4 w-4" /> : <Mic className="mr-2 h-4 w-4" />}
-              {recording ? "Stop recording" : recordingStarting ? "Starting mic..." : "Record Live"}
-            </Button>
-          </div>
-        </div>
+        </fieldset>
 
         <DatasetUploader
           ref={uploaderRef}
