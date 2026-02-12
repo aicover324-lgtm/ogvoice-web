@@ -144,7 +144,7 @@ export function NewVoiceProfilePage() {
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-200">Before You Upload</h2>
           <Badge variant="outline" className="border-cyan-300/40 bg-cyan-400/10 text-cyan-200">
-            Training rules
+            Cloning rules
           </Badge>
         </div>
 
