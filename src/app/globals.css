@@ -118,7 +118,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
@@ -134,6 +134,10 @@
   [style*="position: fixed"][style*="bottom: 0"][style*="left: 0"][style*="right: 0"] {
     border-top: 0 !important;
     box-shadow: none !important;
+  }
+  #feedback-toolbar,
+  [aria-label="Vercel Toolbar"] {
+    display: none !important;
   }
   hr {
     border: 0;
