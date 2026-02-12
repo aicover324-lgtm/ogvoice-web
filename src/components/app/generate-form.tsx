@@ -6,6 +6,7 @@ import { CheckCircle2, CloudUpload, Download, FileAudio, LoaderCircle, PlusCircl
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { CustomAudioPlayer } from "@/components/app/custom-audio-player";
 import { DatasetUploader, type DatasetUploaderHandle, type DatasetUploadState } from "@/components/app/dataset-uploader";
 import { cn } from "@/lib/utils";
 
@@ -265,21 +266,6 @@ export function GenerateForm({
     if (!el) return;
     el.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [activeResultJobId]);
-
-  React.useEffect(() => {
-    const player = playerRef.current;
-    if (!player) return;
-    const onPlay = () => setPlaying(true);
-    const onPause = () => setPlaying(false);
-    player.addEventListener("play", onPlay);
-    player.addEventListener("pause", onPause);
-    player.addEventListener("ended", onPause);
-    return () => {
-      player.removeEventListener("play", onPlay);
-      player.removeEventListener("pause", onPause);
-      player.removeEventListener("ended", onPause);
-    };
-  }, []);
 
   function togglePlay() {
     const p = playerRef.current;
@@ -556,11 +542,7 @@ export function GenerateForm({
               </Button>
             </div>
 
-            {inputPreviewUrl ? (
-              <audio preload="metadata" controls className="mt-3 w-full" src={inputPreviewUrl}>
-                <track kind="captions" srcLang="en" label="captions" src="data:text/vtt,WEBVTT" />
-              </audio>
-            ) : null}
+            {inputPreviewUrl ? <CustomAudioPlayer src={inputPreviewUrl} preload="metadata" variant="compact" className="mt-3" /> : null}
           </div>
         ) : null}
 
@@ -616,7 +598,11 @@ export function GenerateForm({
             </div>
 
             <div className="mt-6 flex items-center justify-end gap-3 border-t border-white/10 pt-5">
-              <Button className="og-btn-gradient rounded-xl px-8" onClick={() => void start()} disabled={loading || !inputAssetId || uploadBusy}>
+              <Button
+                className="og-btn-gradient rounded-xl px-8 cursor-pointer disabled:pointer-events-auto disabled:cursor-not-allowed"
+                onClick={() => void start()}
+                disabled={loading || !inputAssetId || uploadBusy}
+              >
                 {loading ? "Starting..." : "Create Cover"}
               </Button>
             </div>
@@ -700,9 +686,13 @@ export function GenerateForm({
               </div>
             </div>
 
-            <audio ref={playerRef} preload="none" src={outputUrl || undefined} className="mt-3 w-full" controls>
-              <track kind="captions" srcLang="en" label="captions" src="data:text/vtt,WEBVTT" />
-            </audio>
+            <CustomAudioPlayer
+              ref={playerRef}
+              src={outputUrl || null}
+              preload="none"
+              className="mt-3"
+              onPlayStateChange={setPlaying}
+            />
 
             {outputUrl ? (
               <Button asChild className="og-btn-gradient mt-3 w-full rounded-xl">
