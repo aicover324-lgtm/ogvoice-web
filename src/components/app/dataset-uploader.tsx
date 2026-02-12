@@ -42,12 +42,22 @@ export type DatasetUploaderHandle = {
   uploadFiles: (files: FileList | File[]) => Promise<void>;
 };
 
+export type DatasetUploadState = {
+  phase: "idle" | "queued" | "uploading" | "confirming" | "done" | "error";
+  progress: number;
+  fileName?: string;
+  fileSize?: number;
+  error?: string;
+};
+
 export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
   voiceProfileId?: string;
   type: "dataset_audio" | "song_input";
   onComplete?: () => void;
   onAssetCreated?: (assetId: string) => void;
   onFilePicked?: (fileName: string) => void;
+  onFileSelected?: (file: File) => void;
+  onUploadStateChange?: (state: DatasetUploadState) => void;
   disabled?: boolean;
   disabledReason?: string;
   requireVoiceProfileId?: boolean;
@@ -63,6 +73,8 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
     onComplete,
     onAssetCreated,
     onFilePicked,
+    onFileSelected,
+    onUploadStateChange,
     disabled,
     disabledReason,
     requireVoiceProfileId,
@@ -105,7 +117,16 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
       }
     }
 
-    if (files[0]) onFilePicked?.(files[0].name);
+    if (files[0]) {
+      onFilePicked?.(files[0].name);
+      onFileSelected?.(files[0]);
+      onUploadStateChange?.({
+        phase: "queued",
+        progress: 0,
+        fileName: files[0].name,
+        fileSize: files[0].size,
+      });
+    }
 
     const next: UploadItem[] = files.map((f) => ({
       id: crypto.randomUUID(),
@@ -142,6 +163,12 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
 
   async function uploadFile(file: File, itemId: string) {
     setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, status: "uploading", progress: 1 } : it)));
+    onUploadStateChange?.({
+      phase: "uploading",
+      progress: 1,
+      fileName: file.name,
+      fileSize: file.size,
+    });
 
     const presignRes = await fetch("/api/uploads/presign", {
       method: "POST",
@@ -159,6 +186,13 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
     if (!presignRes.ok || !presignJson?.ok) {
       const msg = presignJson?.error?.message || "Failed to presign upload";
       setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, status: "error", error: msg } : it)));
+      onUploadStateChange?.({
+        phase: "error",
+        progress: 0,
+        fileName: file.name,
+        fileSize: file.size,
+        error: msg,
+      });
       throw new Error(msg);
     }
 
@@ -174,11 +208,17 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
       Object.entries(requiredHeaders || {}).forEach(([k, v]) => {
         xhr.setRequestHeader(k, v);
       });
-      xhr.upload.onprogress = (evt) => {
-        if (!evt.lengthComputable) return;
-        const p = Math.round((evt.loaded / evt.total) * 90);
-        setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, progress: Math.max(1, p) } : it)));
-      };
+        xhr.upload.onprogress = (evt) => {
+          if (!evt.lengthComputable) return;
+          const p = Math.round((evt.loaded / evt.total) * 90);
+          setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, progress: Math.max(1, p) } : it)));
+          onUploadStateChange?.({
+            phase: "uploading",
+            progress: Math.max(1, p),
+            fileName: file.name,
+            fileSize: file.size,
+          });
+        };
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) resolve();
         else reject(new Error(`Upload failed (${xhr.status})`));
@@ -188,6 +228,12 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
     });
 
     setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, status: "confirming", progress: 95 } : it)));
+    onUploadStateChange?.({
+      phase: "confirming",
+      progress: 95,
+      fileName: file.name,
+      fileSize: file.size,
+    });
     const confirmRes = await fetch("/api/uploads/confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -204,6 +250,13 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
     if (!confirmRes.ok || !confirmJson?.ok) {
       const msg = confirmJson?.error?.message || "Failed to confirm upload";
       setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, status: "error", error: msg } : it)));
+      onUploadStateChange?.({
+        phase: "error",
+        progress: 95,
+        fileName: file.name,
+        fileSize: file.size,
+        error: msg,
+      });
       throw new Error(msg);
     }
 
@@ -211,6 +264,12 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
     if (assetId) onAssetCreated?.(assetId);
 
     setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, status: "done", progress: 100 } : it)));
+    onUploadStateChange?.({
+      phase: "done",
+      progress: 100,
+      fileName: file.name,
+      fileSize: file.size,
+    });
   }
 
   async function onPickFiles(files: FileList | null) {

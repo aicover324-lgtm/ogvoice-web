@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2, CloudUpload, Download, LoaderCircle, PlusCircle, Share2, Play, Pause } from "lucide-react";
+import { CheckCircle2, CloudUpload, Download, FileAudio, LoaderCircle, PlusCircle, Share2, Play, Pause } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DatasetUploader, type DatasetUploaderHandle } from "@/components/app/dataset-uploader";
+import { DatasetUploader, type DatasetUploaderHandle, type DatasetUploadState } from "@/components/app/dataset-uploader";
 import { cn } from "@/lib/utils";
 
 type Voice = { id: string; name: string; language: string | null };
@@ -29,6 +29,14 @@ type QueueItem = {
   inputLabel: string;
   outputAssetId?: string | null;
   outputFileName?: string | null;
+};
+
+type UploadPanelState = {
+  phase: "idle" | "queued" | "uploading" | "confirming" | "done" | "error";
+  progress: number;
+  fileName: string | null;
+  fileSize: number | null;
+  error: string | null;
 };
 
 const AUDIO_ALLOWED_MIME = new Set([
@@ -67,38 +75,6 @@ const WAVE_BARS = [
   { id: "b24", height: 84, opacity: 0.84 },
 ];
 
-type DemoTrack = {
-  id: string;
-  title: string;
-  meta: string;
-  fileName: string;
-  url: string;
-};
-
-const DEMO_TRACKS: DemoTrack[] = [
-  {
-    id: "demo-acoustic",
-    title: "Acoustic Soul",
-    meta: "0:07 - Warm and smooth",
-    fileName: "acoustic-soul-loop.wav",
-    url: "/demo-tracks/acoustic-soul-loop.wav",
-  },
-  {
-    id: "demo-cyber",
-    title: "Cyber Rap",
-    meta: "0:07 - Deep and punchy",
-    fileName: "cyberpunk-rap-loop.wav",
-    url: "/demo-tracks/cyberpunk-rap-loop.wav",
-  },
-  {
-    id: "demo-rnb",
-    title: "Mellow R&B",
-    meta: "0:08 - Soft and airy",
-    fileName: "mellow-rnb-hook.wav",
-    url: "/demo-tracks/mellow-rnb-hook.wav",
-  },
-];
-
 export function GenerateForm({
   voices,
   initialVoiceProfileId,
@@ -121,10 +97,17 @@ export function GenerateForm({
   const [jobId, setJobId] = React.useState<string | null>(null);
   const [job, setJob] = React.useState<GenJob | null>(null);
   const [queue, setQueue] = React.useState<QueueItem[]>(initialQueue);
+  const [uploadState, setUploadState] = React.useState<UploadPanelState>({
+    phase: "idle",
+    progress: 0,
+    fileName: null,
+    fileSize: null,
+    error: null,
+  });
+  const [inputPreviewUrl, setInputPreviewUrl] = React.useState<string | null>(null);
   const [activeResultJobId, setActiveResultJobId] = React.useState<string | null>(
     initialQueue.find((item) => item.status === "succeeded" && item.outputAssetId)?.id ?? null
   );
-  const [loadingDemoTrackId, setLoadingDemoTrackId] = React.useState<string | null>(null);
   const [outputUrl, setOutputUrl] = React.useState<string | null>(null);
   const [outputFileName, setOutputFileName] = React.useState<string | null>(null);
   const [loadingOutput, setLoadingOutput] = React.useState(false);
@@ -132,16 +115,31 @@ export function GenerateForm({
   const [dragState, setDragState] = React.useState<"idle" | "valid" | "invalid">("idle");
 
   const uploaderRef = React.useRef<DatasetUploaderHandle | null>(null);
+  const localPreviewUrlRef = React.useRef<string | null>(null);
   const playerRef = React.useRef<HTMLAudioElement | null>(null);
   const queueItemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const [playing, setPlaying] = React.useState(false);
   const lastOutputAssetIdRef = React.useRef<string | null>(null);
 
   const selectedVoice = React.useMemo(() => voices.find((v) => v.id === voiceProfileId) || null, [voiceProfileId, voices]);
+  const uploadBusy =
+    uploadState.phase === "queued" || uploadState.phase === "uploading" || uploadState.phase === "confirming";
+
+  React.useEffect(() => {
+    return () => {
+      if (localPreviewUrlRef.current) {
+        URL.revokeObjectURL(localPreviewUrlRef.current);
+      }
+    };
+  }, []);
 
   async function start() {
     if (!voiceProfileId) {
       toast.error("Choose a cloned voice first.");
+      return;
+    }
+    if (uploadBusy) {
+      toast.error("Please wait until upload is complete.");
       return;
     }
     if (!inputAssetId) {
@@ -301,27 +299,6 @@ export function GenerateForm({
     await fetchOutputUrl(item.outputAssetId, item.outputFileName || null);
   }
 
-  async function uploadDemoTrack(track: DemoTrack) {
-    if (!uploaderRef.current) {
-      toast.error("Uploader is not ready yet.");
-      return;
-    }
-
-    setLoadingDemoTrackId(track.id);
-    try {
-      const res = await fetch(track.url, { cache: "no-store" });
-      if (!res.ok) throw new Error("Could not load demo track.");
-      const blob = await res.blob();
-      const file = new File([blob], track.fileName, { type: blob.type || "audio/wav" });
-      await uploaderRef.current.uploadFiles([file]);
-      toast.success(`${track.title} ready.`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not load demo track.");
-    } finally {
-      setLoadingDemoTrackId(null);
-    }
-  }
-
   const conversionsToday = React.useMemo(() => {
     const today = new Date();
     const y = today.getFullYear();
@@ -389,7 +366,10 @@ export function GenerateForm({
       <section className="space-y-5">
         <button
           type="button"
-          onClick={() => uploaderRef.current?.openPicker()}
+          onClick={() => {
+            if (uploadBusy) return;
+            uploaderRef.current?.openPicker();
+          }}
           onDragEnter={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -419,17 +399,26 @@ export function GenerateForm({
               toast.error("Only wav, mp3, or flac singing records are allowed.");
               return;
             }
+            if (uploadBusy) {
+              toast.error("Please wait for the current upload to finish.");
+              return;
+            }
             void uploaderRef.current?.uploadFiles([file]);
           }}
           className={cn(
             "rounded-2xl border-2 border-dashed bg-[#171d33] p-10 text-center transition-colors",
             dragState === "valid" ? "border-cyan-400/70" : dragState === "invalid" ? "border-red-500/60" : "border-white/20",
-            dragState === "invalid" ? "cursor-not-allowed" : "cursor-pointer",
+            dragState === "invalid" || uploadBusy ? "cursor-not-allowed" : "cursor-pointer",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
           )}
         >
-          <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-cyan-500/15 text-cyan-300">
-            <CloudUpload className="h-7 w-7" />
+          <div
+            className={cn(
+              "mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-cyan-500/15 text-cyan-300",
+              uploadBusy ? "animate-pulse" : ""
+            )}
+          >
+            {uploadBusy ? <LoaderCircle className="h-7 w-7 animate-spin" /> : <CloudUpload className="h-7 w-7" />}
           </div>
           <h3 className="text-3xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
             Upload Singing Record
@@ -439,11 +428,37 @@ export function GenerateForm({
           </p>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <span className="og-btn-gradient inline-flex h-10 items-center rounded-xl px-7 text-sm font-semibold">Select File</span>
+            <span className={cn("inline-flex h-10 items-center rounded-xl px-7 text-sm font-semibold", uploadBusy ? "border border-white/20 bg-white/5 text-slate-300" : "og-btn-gradient")}>
+              {uploadBusy ? "Uploading..." : "Select File"}
+            </span>
             <span className="inline-flex h-10 items-center rounded-xl border border-white/15 bg-white/5 px-7 text-sm font-semibold text-muted-foreground">
               Record Live (Soon)
             </span>
           </div>
+
+          {uploadState.phase !== "idle" ? (
+            <div className="mx-auto mt-5 max-w-xl text-left">
+              <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/10">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all duration-400",
+                    uploadState.phase === "error"
+                      ? "bg-red-400"
+                      : uploadState.phase === "done"
+                        ? "bg-emerald-400"
+                        : "bg-gradient-to-r from-cyan-400 to-fuchsia-400"
+                  )}
+                  style={{ width: `${Math.max(4, uploadState.progress)}%` }}
+                />
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs">
+                <span className={uploadState.phase === "error" ? "text-red-300" : "text-slate-300"}>
+                  {uploadStatusText(uploadState)}
+                </span>
+                <span className="font-semibold text-cyan-200">{Math.max(0, uploadState.progress)}%</span>
+              </div>
+            </div>
+          ) : null}
 
           <div className="mt-5 text-xs text-muted-foreground">
             {inputFileName ? `Selected: ${inputFileName}` : "No singing record selected yet."}
@@ -459,33 +474,95 @@ export function GenerateForm({
           hideButton
           hideList
           suppressSuccessToast
+          onFileSelected={(file) => {
+            setInputAssetId(null);
+            setInputFileName(file.name);
+            setUploadState({
+              phase: "queued",
+              progress: 1,
+              fileName: file.name,
+              fileSize: file.size,
+              error: null,
+            });
+            if (localPreviewUrlRef.current) {
+              URL.revokeObjectURL(localPreviewUrlRef.current);
+            }
+            const nextUrl = URL.createObjectURL(file);
+            localPreviewUrlRef.current = nextUrl;
+            setInputPreviewUrl(nextUrl);
+          }}
+          onUploadStateChange={(next: DatasetUploadState) => {
+            setUploadState((prev) => ({
+              phase: next.phase,
+              progress: Math.max(0, Math.min(100, next.progress)),
+              fileName: next.fileName || prev.fileName,
+              fileSize: next.fileSize ?? prev.fileSize,
+              error: next.error || null,
+            }));
+          }}
           onFilePicked={(name) => setInputFileName(name)}
           onAssetCreated={(id) => {
             setInputAssetId(id);
+            setUploadState((prev) => ({
+              ...prev,
+              phase: "done",
+              progress: 100,
+              error: null,
+            }));
             toast.success("Singing record uploaded.");
           }}
         />
 
-        <div>
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Try a demo track</h3>
-            <span className="text-xs font-semibold text-cyan-300">One click upload</span>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {DEMO_TRACKS.map((track) => (
-              <DemoCard
-                key={track.id}
-                title={track.title}
-                meta={track.meta}
-                src={track.url}
-                loading={loadingDemoTrackId === track.id}
-                onUse={() => {
-                  void uploadDemoTrack(track);
+        {uploadState.fileName ? (
+          <div className="rounded-2xl border border-white/10 bg-[#171d33] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-lg bg-cyan-500/15 text-cyan-200">
+                  <FileAudio className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold">{uploadState.fileName}</div>
+                  <div className="text-xs text-slate-400">{formatFileSize(uploadState.fileSize)}</div>
+                </div>
+              </div>
+              <Badge
+                variant="outline"
+                className={cn(
+                  uploadBusy
+                    ? "border-cyan-300/35 bg-cyan-400/10 text-cyan-200"
+                    : uploadState.phase === "done"
+                      ? "border-emerald-300/35 bg-emerald-400/10 text-emerald-200"
+                      : uploadState.phase === "error"
+                        ? "border-red-300/35 bg-red-400/10 text-red-200"
+                        : "border-white/20 text-slate-300"
+                )}
+              >
+                {uploadBusy ? "Uploading" : uploadState.phase === "done" ? "Ready" : uploadState.phase === "error" ? "Upload failed" : "Selected"}
+              </Badge>
+            </div>
+
+            <div className="mt-3 flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer disabled:pointer-events-auto disabled:cursor-not-allowed"
+                disabled={uploadBusy}
+                onClick={() => {
+                  uploaderRef.current?.openPicker();
                 }}
-              />
-            ))}
+              >
+                Replace file
+              </Button>
+            </div>
+
+            {inputPreviewUrl ? (
+              <audio preload="metadata" controls className="mt-3 w-full" src={inputPreviewUrl}>
+                <track kind="captions" srcLang="en" label="captions" src="data:text/vtt,WEBVTT" />
+              </audio>
+            ) : null}
           </div>
-        </div>
+        ) : null}
 
         <div className="rounded-2xl border border-white/10 bg-[#171d33] p-5">
           <h3 className="flex items-center gap-2 text-xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
@@ -538,12 +615,8 @@ export function GenerateForm({
               </div>
             </div>
 
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <Badge variant="outline">Split audio: On</Badge>
-              </div>
-
-              <Button className="og-btn-gradient rounded-xl px-8" onClick={() => void start()} disabled={loading || !inputAssetId}>
+            <div className="mt-6 flex items-center justify-end gap-3 border-t border-white/10 pt-5">
+              <Button className="og-btn-gradient rounded-xl px-8" onClick={() => void start()} disabled={loading || !inputAssetId || uploadBusy}>
                 {loading ? "Starting..." : "Create Cover"}
               </Button>
             </div>
@@ -753,38 +826,6 @@ export function GenerateForm({
   );
 }
 
-function DemoCard({
-  title,
-  meta,
-  src,
-  loading,
-  onUse,
-}: {
-  title: string;
-  meta: string;
-  src: string;
-  loading: boolean;
-  onUse: () => void;
-}) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-[#171d33] p-3">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <div className="truncate text-sm font-semibold">{title}</div>
-          <div className="truncate text-xs text-muted-foreground">{meta}</div>
-        </div>
-        <Button type="button" size="sm" className="h-8 rounded-lg" disabled={loading} onClick={onUse}>
-          {loading ? <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
-          {loading ? "Loading..." : "Use track"}
-        </Button>
-      </div>
-      <audio preload="none" controls className="h-8 w-full" src={src}>
-        <track kind="captions" srcLang="en" label="captions" src="data:text/vtt,WEBVTT" />
-      </audio>
-    </div>
-  );
-}
-
 function queueStatusLabel(status: QueueItem["status"]) {
   if (status === "queued") return "Waiting";
   if (status === "running") return "Converting";
@@ -833,4 +874,25 @@ function formatAgo(iso: string) {
   if (diffHour < 24) return `${diffHour}h ago`;
   const diffDay = Math.floor(diffHour / 24);
   return `${diffDay}d ago`;
+}
+
+function uploadStatusText(state: UploadPanelState) {
+  if (state.phase === "queued") return "Preparing upload...";
+  if (state.phase === "uploading") return "Uploading singing record...";
+  if (state.phase === "confirming") return "Finalizing file...";
+  if (state.phase === "done") return "Upload complete.";
+  if (state.phase === "error") return state.error || "Upload failed.";
+  return "";
+}
+
+function formatFileSize(size: number | null) {
+  if (!size || size <= 0) return "Unknown size";
+  const units = ["B", "KB", "MB", "GB"];
+  let value = size;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${value.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
 }
