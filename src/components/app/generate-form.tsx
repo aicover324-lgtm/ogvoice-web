@@ -45,6 +45,9 @@ type DebugBorderRow = {
   id: string;
   color: string;
   tag: string;
+  position: string;
+  top: number;
+  bottom: number;
   width: number;
   height: number;
   className: string;
@@ -139,7 +142,6 @@ export function GenerateForm({
   const recordingTimerRef = React.useRef<number | null>(null);
   const queueItemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const lastOutputAssetIdRef = React.useRef<string | null>(null);
-  const debugRootRef = React.useRef<HTMLDivElement | null>(null);
   const [debugBorders, setDebugBorders] = React.useState<DebugBorderRow[]>([]);
 
   const selectedVoice = React.useMemo(() => voices.find((v) => v.id === voiceProfileId) || null, [voiceProfileId, voices]);
@@ -413,12 +415,9 @@ export function GenerateForm({
   const canCreateCover = !!inputAssetId && !uploadBusy && !recordingBusy && !loading;
 
   React.useEffect(() => {
-    const root = debugRootRef.current;
-    if (!root) return;
-
-    const all = Array.from(root.querySelectorAll<HTMLElement>("*"));
+    const all = Array.from(document.body.querySelectorAll<HTMLElement>("*"));
     const rows: DebugBorderRow[] = [];
-    const skipTags = new Set(["BUTTON", "A", "SPAN", "SVG", "PATH", "INPUT", "AUDIO"]);
+    const skipTags = new Set(["BUTTON", "A", "SPAN", "SVG", "PATH", "INPUT", "AUDIO", "TH", "TD", "TR", "TBODY", "THEAD", "TABLE"]);
 
     for (const el of all) {
       if (skipTags.has(el.tagName)) continue;
@@ -433,20 +432,24 @@ export function GenerateForm({
 
       const rect = el.getBoundingClientRect();
       if (rect.width < 220 || rect.height < 56) continue;
+      if (rect.width > window.innerWidth * 0.98 && rect.height > window.innerHeight * 0.95) continue;
+      if ((el.className || "").toString().includes("Generate Border Debug Table")) continue;
 
       const id = `dbg-${rows.length + 1}`;
       const hue = Math.floor(Math.random() * 360);
       const color = `hsl(${hue} 100% 50%)`;
 
       el.dataset.debugBorderId = id;
-      el.style.setProperty("border-width", "4px", "important");
-      el.style.setProperty("border-style", "solid", "important");
-      el.style.setProperty("border-color", color, "important");
+      el.style.setProperty("outline", `4px solid ${color}`, "important");
+      el.style.setProperty("outline-offset", "-2px", "important");
 
       rows.push({
         id,
         color,
         tag: el.tagName,
+        position: style.position,
+        top: Math.round(rect.top),
+        bottom: Math.round(rect.bottom),
         width: Math.round(rect.width),
         height: Math.round(rect.height),
         className: (el.className || "").toString().slice(0, 140),
@@ -454,10 +457,10 @@ export function GenerateForm({
     }
 
     setDebugBorders(rows);
-  }, [queue.length, voices.length]);
+  }, [queue, voices]);
 
   return (
-    <div ref={debugRootRef} className="space-y-6">
+    <div className="space-y-6">
       <div className="grid items-start gap-6 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
       <aside className="min-w-0 self-start rounded-2xl border border-white/10 bg-[#11172b]">
         <div className="border-b border-white/10 p-4">
@@ -859,7 +862,7 @@ export function GenerateForm({
         </div>
       </section>
 
-      <aside className="min-w-0 self-start overflow-hidden rounded-2xl border-2 border-emerald-400 bg-[#11172b]">
+      <aside className="min-w-0 self-start overflow-hidden rounded-2xl border border-white/10 bg-[#11172b]">
         <div className="border-b border-white/10 p-5">
           <h3 className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
             Latest Result
@@ -1060,6 +1063,8 @@ export function GenerateForm({
               <th className="px-2 py-1">ID</th>
               <th className="px-2 py-1">Color</th>
               <th className="px-2 py-1">Tag</th>
+              <th className="px-2 py-1">Pos</th>
+              <th className="px-2 py-1">Top/Bottom</th>
               <th className="px-2 py-1">Size</th>
               <th className="px-2 py-1">Class</th>
             </tr>
@@ -1075,6 +1080,8 @@ export function GenerateForm({
                   </span>
                 </td>
                 <td className="px-2 py-1 font-mono">{row.tag}</td>
+                <td className="px-2 py-1 font-mono">{row.position}</td>
+                <td className="px-2 py-1 font-mono">{row.top}/{row.bottom}</td>
                 <td className="px-2 py-1 font-mono">{row.width}x{row.height}</td>
                 <td className="px-2 py-1 font-mono text-muted-foreground">{row.className}</td>
               </tr>
