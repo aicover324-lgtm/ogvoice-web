@@ -6,7 +6,7 @@ import { GenerateForm } from "@/components/app/generate-form";
 export default async function GeneratePage({
   searchParams,
 }: {
-  searchParams: Promise<{ voiceId?: string; tab?: string }>;
+  searchParams: Promise<{ voiceId?: string }>;
 }) {
   const session = await getServerSession(authOptions);
   const userId = session!.user.id;
@@ -56,19 +56,8 @@ export default async function GeneratePage({
     outputFileName: j.outputAssetId ? assetById.get(j.outputAssetId) || "converted.wav" : null,
   }));
 
-  const initialLibrary = recentJobsRaw
-    .filter((j) => !!j.outputAssetId)
-    .map((j) => ({
-      jobId: j.id,
-      assetId: j.outputAssetId as string,
-      fileName: assetById.get(j.outputAssetId as string) || "converted.wav",
-      voiceName: j.voiceProfile.name,
-      createdAt: j.createdAt.toISOString(),
-    }));
-
   const requestedVoiceId = typeof params.voiceId === "string" ? params.voiceId : null;
   const initialVoiceId = requestedVoiceId && voices.some((v) => v.id === requestedVoiceId) ? requestedVoiceId : null;
-  const initialTab = params.tab === "library" ? "library" : "generate";
 
   return (
     <main className="px-4 pb-8 pt-6 md:px-6 xl:px-8">
@@ -81,8 +70,6 @@ export default async function GeneratePage({
           voices={voices}
           initialVoiceProfileId={initialVoiceId}
           initialQueue={initialQueue}
-          initialLibrary={initialLibrary}
-          initialTab={initialTab}
         />
         )}
     </main>
