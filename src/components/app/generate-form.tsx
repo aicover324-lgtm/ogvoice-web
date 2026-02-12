@@ -301,7 +301,7 @@ export function GenerateForm({
 
   return (
     <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
-      <aside className="rounded-2xl border border-white/10 bg-[#11172b]">
+      <aside className="min-w-0 rounded-2xl border border-white/10 bg-[#11172b]">
         <div className="border-b border-white/10 p-4">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
@@ -350,7 +350,7 @@ export function GenerateForm({
         </div>
       </aside>
 
-      <section className="space-y-5">
+      <section className="min-w-0 space-y-5">
         <button
           type="button"
           onClick={() => {
@@ -543,7 +543,7 @@ export function GenerateForm({
               </Button>
             </div>
 
-            {inputPreviewUrl ? <CustomAudioPlayer src={inputPreviewUrl} preload="metadata" variant="compact" className="mt-3" /> : null}
+            {inputPreviewUrl ? <CustomAudioPlayer src={inputPreviewUrl} preload="metadata" variant="compact" className="mt-3 w-full" /> : null}
           </div>
         ) : null}
 
@@ -601,7 +601,7 @@ export function GenerateForm({
             <div className="mt-6 flex items-center justify-end gap-3 border-t border-white/10 pt-5">
               <Button
                 className={cn(
-                  "rounded-xl px-8",
+                  "rounded-xl px-8 disabled:pointer-events-auto disabled:cursor-not-allowed",
                   canCreateCover
                     ? "og-btn-gradient cursor-pointer"
                     : "border border-white/15 bg-white/10 text-slate-400 cursor-not-allowed"
@@ -617,7 +617,7 @@ export function GenerateForm({
         </div>
       </section>
 
-      <aside className="rounded-2xl border border-white/10 bg-[#11172b]">
+      <aside className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#11172b]">
         <div className="border-b border-white/10 p-5">
           <h3 className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
             Latest Result
@@ -628,7 +628,7 @@ export function GenerateForm({
             </div>
           ) : null}
 
-          <div className="mt-4 rounded-xl bg-[#0e1733] p-4">
+          <div className="mt-4 overflow-hidden rounded-xl bg-[#0e1733] p-4">
             <div className="mb-4 flex h-16 items-end gap-1">
               {WAVE_BARS.map((bar) => (
                 <span
@@ -696,7 +696,7 @@ export function GenerateForm({
               ref={playerRef}
               src={outputUrl || null}
               preload="none"
-              className="mt-3"
+              className="mt-3 w-full"
               onPlayStateChange={setPlaying}
             />
 

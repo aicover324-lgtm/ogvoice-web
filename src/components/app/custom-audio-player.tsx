@@ -128,7 +128,7 @@ export const CustomAudioPlayer = React.forwardRef<HTMLAudioElement, CustomAudioP
     return (
       <div
         className={cn(
-          "rounded-xl border border-white/12 bg-[#0f1730]",
+          "w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-white/12 bg-[#0f1730]",
           variant === "compact" ? "p-2.5" : "p-3",
           className
         )}
@@ -137,14 +137,14 @@ export const CustomAudioPlayer = React.forwardRef<HTMLAudioElement, CustomAudioP
           <track kind="captions" srcLang="en" label="captions" src="data:text/vtt,WEBVTT" />
         </audio>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex min-w-0 items-center gap-2.5">
           <button
             type="button"
             onClick={togglePlay}
             disabled={!hasSrc}
             aria-label={playing ? "Pause" : "Play"}
             className={cn(
-              "grid h-8 w-8 place-items-center rounded-full border transition-colors",
+              "grid h-8 w-8 shrink-0 place-items-center rounded-full border transition-colors",
               hasSrc
                 ? "cursor-pointer border-cyan-300/30 bg-cyan-400/10 text-cyan-200 hover:bg-cyan-400/20"
                 : "cursor-not-allowed border-white/15 bg-white/5 text-slate-500"
@@ -153,50 +153,70 @@ export const CustomAudioPlayer = React.forwardRef<HTMLAudioElement, CustomAudioP
             {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
           </button>
 
-          <div className="min-w-[88px] text-xs font-semibold text-slate-200 tabular-nums">
-            {formatTime(currentTime)} / {formatTime(duration)}
+          <div className="relative h-2.5 w-full min-w-0">
+            <div className="absolute inset-0 rounded-full bg-white/15" />
+            <div
+              className="pointer-events-none absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-400 via-sky-400 to-fuchsia-400 shadow-[0_0_14px_rgba(34,211,238,0.5)] transition-[width] duration-200"
+              style={{ width: `${progress}%` }}
+            />
+            <div
+              className={cn(
+                "pointer-events-none absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full border",
+                hasSrc
+                  ? "border-cyan-100/70 bg-cyan-200 shadow-[0_0_10px_rgba(34,211,238,0.85)]"
+                  : "border-slate-400/40 bg-slate-400/50"
+              )}
+              style={{ left: `calc(${progress}% - 6px)` }}
+            />
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={0.1}
+              value={progress}
+              onChange={(e) => seekTo(Number(e.target.value))}
+              disabled={!hasSrc}
+              aria-label="Seek"
+              className="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0 disabled:cursor-not-allowed"
+            />
           </div>
 
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={0.1}
-            value={progress}
-            onChange={(e) => seekTo(Number(e.target.value))}
-            disabled={!hasSrc}
-            aria-label="Seek"
-            className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/15 accent-cyan-300 disabled:cursor-not-allowed"
-          />
+          <div className="shrink-0 text-[11px] font-semibold text-slate-200 tabular-nums">
+            {formatTime(currentTime)} / {formatTime(duration)}
+          </div>
+        </div>
 
-          <button
-            type="button"
-            onClick={toggleMute}
-            disabled={!hasSrc}
-            aria-label={muted ? "Unmute" : "Mute"}
-            className={cn(
-              "grid h-7 w-7 place-items-center rounded-md transition-colors",
-              hasSrc ? "cursor-pointer text-slate-200 hover:bg-white/10" : "cursor-not-allowed text-slate-500"
-            )}
-          >
-            {muted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-          </button>
+        <div className="mt-2.5 flex min-w-0 flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleMute}
+              disabled={!hasSrc}
+              aria-label={muted ? "Unmute" : "Mute"}
+              className={cn(
+                "grid h-7 w-7 shrink-0 place-items-center rounded-md transition-colors",
+                hasSrc ? "cursor-pointer text-slate-200 hover:bg-white/10" : "cursor-not-allowed text-slate-500"
+              )}
+            >
+              {muted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+            </button>
 
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={muted ? 0 : volume}
-            onChange={(e) => onVolumeChange(Number(e.target.value))}
-            disabled={!hasSrc}
-            aria-label="Volume"
-            className="hidden h-1.5 w-20 cursor-pointer appearance-none rounded-full bg-white/15 accent-fuchsia-300 lg:block disabled:cursor-not-allowed"
-          />
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={muted ? 0 : volume}
+              onChange={(e) => onVolumeChange(Number(e.target.value))}
+              disabled={!hasSrc}
+              aria-label="Volume"
+              className="h-1.5 w-24 cursor-pointer appearance-none rounded-full bg-white/15 accent-fuchsia-300 sm:w-32 disabled:cursor-not-allowed"
+            />
+          </div>
 
           <fieldset
             aria-label="Playback speed"
-            className="hidden items-center rounded-md border border-white/15 bg-white/[0.04] p-0.5 sm:inline-flex"
+            className="inline-flex shrink-0 items-center rounded-md border border-white/15 bg-white/[0.04] p-0.5"
           >
             {([0.75, 1, 1.25] as const).map((v) => {
               const active = Math.abs(speed - v) < 0.001;
