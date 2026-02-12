@@ -211,7 +211,7 @@ export function MyLibraryPanel({ initialItems }: { initialItems: LibraryItem[] }
             return (
               <article
                 key={item.assetId}
-                className="relative flex min-h-[330px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.03)_100%)] p-3"
+                className="relative flex min-h-[360px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.03)_100%)] p-3"
               >
                 <div className="relative overflow-hidden rounded-xl border border-white/10">
                   <VoiceLibraryCover voiceId={item.voiceId} alt={item.voiceName} />
@@ -229,7 +229,7 @@ export function MyLibraryPanel({ initialItems }: { initialItems: LibraryItem[] }
                           type="button"
                           variant="outline"
                           size="icon"
-                          className="h-8 w-8 rounded-lg border-white/20 bg-white/5 text-slate-100 hover:bg-white/10"
+                          className="h-8 w-8 rounded-lg border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer disabled:pointer-events-auto disabled:cursor-not-allowed"
                           disabled={busy}
                           aria-label="Track actions"
                         >
@@ -272,7 +272,7 @@ export function MyLibraryPanel({ initialItems }: { initialItems: LibraryItem[] }
                       <Button
                         type="button"
                         size="icon"
-                        className="h-8 w-8 rounded-lg"
+                        className="h-8 w-8 rounded-lg cursor-pointer disabled:pointer-events-auto disabled:cursor-not-allowed"
                         disabled={busy}
                         onClick={() => void saveRename(item.assetId)}
                         title="Save"
@@ -283,7 +283,7 @@ export function MyLibraryPanel({ initialItems }: { initialItems: LibraryItem[] }
                         type="button"
                         variant="outline"
                         size="icon"
-                        className="h-8 w-8 rounded-lg"
+                        className="h-8 w-8 rounded-lg cursor-pointer disabled:pointer-events-auto disabled:cursor-not-allowed"
                         disabled={busy}
                         onClick={cancelRename}
                         title="Cancel"
@@ -306,7 +306,8 @@ export function MyLibraryPanel({ initialItems }: { initialItems: LibraryItem[] }
                         "inline-flex h-11 w-11 items-center justify-center rounded-full border transition-colors " +
                         (playing
                           ? "border-fuchsia-300/45 bg-fuchsia-500/20 text-fuchsia-100"
-                          : "border-cyan-300/40 bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/22")
+                          : "border-cyan-300/40 bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/22") +
+                        " cursor-pointer disabled:pointer-events-auto disabled:cursor-not-allowed"
                       }
                       disabled={busy || loadingPlay}
                       aria-label={playing ? "Pause" : "Play"}
@@ -347,7 +348,7 @@ function VoiceLibraryCover({ voiceId, alt }: { voiceId: string; alt: string }) {
     <img
       src={src}
       alt={alt}
-      className="aspect-[4/3] w-full object-cover"
+      className="aspect-[3/4] w-full object-cover"
       onError={() => setOk(false)}
     />
   );
