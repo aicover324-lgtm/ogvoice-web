@@ -54,6 +54,38 @@ function clearElementsCrossingViewportLine(y: number) {
   }
 }
 
+function hideSuspiciousExternalOverlays(el: HTMLElement) {
+  const style = window.getComputedStyle(el);
+  if (style.position !== "fixed") return;
+
+  const tag = el.tagName.toLowerCase();
+  const idClass = `${el.id} ${el.className}`.toLowerCase();
+  const z = Number.parseInt(style.zIndex || "0", 10);
+  const rect = el.getBoundingClientRect();
+
+  if (idClass.includes("vercel") || idClass.includes("toolbar") || idClass.includes("feedback")) {
+    el.style.display = "none";
+    return;
+  }
+
+  if (tag === "iframe") {
+    const src = (el as HTMLIFrameElement).src || "";
+    const srcLower = src.toLowerCase();
+    if (srcLower.includes("vercel") || srcLower.includes("toolbar") || srcLower.includes("feedback")) {
+      el.style.display = "none";
+      return;
+    }
+  }
+
+  const wideBottomBar = rect.width >= window.innerWidth * 0.9 && rect.height <= 72 && Math.abs(window.innerHeight - rect.bottom) <= 2;
+  const floatingPillAtRight = rect.width <= 88 && rect.height <= 180 && rect.right >= window.innerWidth - 2 && rect.bottom >= window.innerHeight * 0.35;
+  const veryHighStack = Number.isFinite(z) && z >= 2147483000;
+
+  if ((wideBottomBar || floatingPillAtRight) && veryHighStack) {
+    el.style.display = "none";
+  }
+}
+
 export function FixedBorderGuard() {
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -63,6 +95,7 @@ export function FixedBorderGuard() {
       for (const el of all) {
         clearFixedBottomBorder(el);
         clearFullWidthHairline(el);
+        hideSuspiciousExternalOverlays(el);
       }
 
       const probeYs = [
