@@ -16,7 +16,7 @@ export default async function LibraryPage() {
       id: true,
       outputAssetId: true,
       createdAt: true,
-      voiceProfile: { select: { name: true } },
+      voiceProfile: { select: { id: true, name: true } },
     },
   });
 
@@ -38,11 +38,12 @@ export default async function LibraryPage() {
         jobId: j.id,
         assetId,
         fileName: assetById.get(assetId) || "converted.wav",
+        voiceId: j.voiceProfile.id,
         voiceName: j.voiceProfile.name,
         createdAt: j.createdAt.toISOString(),
       };
     })
-    .filter((x): x is { jobId: string; assetId: string; fileName: string; voiceName: string; createdAt: string } => !!x);
+    .filter((x): x is { jobId: string; assetId: string; fileName: string; voiceId: string; voiceName: string; createdAt: string } => !!x);
 
   return (
     <main className="og-app-main">

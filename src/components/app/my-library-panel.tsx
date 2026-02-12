@@ -2,7 +2,18 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Check, Download, MoreVertical, Pencil, Trash2, X } from "lucide-react";
+import {
+  Check,
+  Download,
+  FileAudio,
+  LoaderCircle,
+  MoreVertical,
+  Pause,
+  Pencil,
+  Play,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +30,7 @@ export type LibraryItem = {
   jobId: string;
   assetId: string;
   fileName: string;
+  voiceId: string;
   voiceName: string;
   createdAt: string;
 };
@@ -29,6 +41,28 @@ export function MyLibraryPanel({ initialItems }: { initialItems: LibraryItem[] }
   const [editingFileName, setEditingFileName] = React.useState("");
   const [savingAssetId, setSavingAssetId] = React.useState<string | null>(null);
   const [deletingAssetId, setDeletingAssetId] = React.useState<string | null>(null);
+  const [playingAssetId, setPlayingAssetId] = React.useState<string | null>(null);
+  const [loadingPlayAssetId, setLoadingPlayAssetId] = React.useState<string | null>(null);
+  const [assetUrls, setAssetUrls] = React.useState<Record<string, string>>({});
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+
+  React.useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onEnded = () => setPlayingAssetId(null);
+    const onPause = () => {
+      if (audio.ended) return;
+      if (audio.currentTime > 0 && audio.paused) {
+        setPlayingAssetId(null);
+      }
+    };
+    audio.addEventListener("ended", onEnded);
+    audio.addEventListener("pause", onPause);
+    return () => {
+      audio.removeEventListener("ended", onEnded);
+      audio.removeEventListener("pause", onPause);
+    };
+  }, []);
 
   function beginRename(item: LibraryItem) {
     setEditingAssetId(item.assetId);
@@ -87,6 +121,11 @@ export function MyLibraryPanel({ initialItems }: { initialItems: LibraryItem[] }
         throw new Error(json?.error?.message || "Could not delete file.");
       }
 
+      if (playingAssetId === item.assetId && audioRef.current) {
+        audioRef.current.pause();
+        setPlayingAssetId(null);
+      }
+
       setItems((prev) => prev.filter((x) => x.assetId !== item.assetId));
       if (editingAssetId === item.assetId) {
         setEditingAssetId(null);
@@ -100,10 +139,61 @@ export function MyLibraryPanel({ initialItems }: { initialItems: LibraryItem[] }
     }
   }
 
+  async function togglePlay(item: LibraryItem) {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (playingAssetId === item.assetId && !audio.paused) {
+      audio.pause();
+      setPlayingAssetId(null);
+      return;
+    }
+
+    const knownUrl = assetUrls[item.assetId];
+    if (knownUrl) {
+      await playFromUrl(item.assetId, knownUrl);
+      return;
+    }
+
+    setLoadingPlayAssetId(item.assetId);
+    try {
+      const res = await fetch(`/api/assets/${encodeURIComponent(item.assetId)}?json=1`, { cache: "no-store" });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error?.message || "Could not load track.");
+      }
+      const url = String(json.data.url || "");
+      if (!url) throw new Error("Could not load track.");
+      setAssetUrls((prev) => ({ ...prev, [item.assetId]: url }));
+      await playFromUrl(item.assetId, url);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not load track.");
+    } finally {
+      setLoadingPlayAssetId(null);
+    }
+  }
+
+  async function playFromUrl(assetId: string, url: string) {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.src = url;
+    try {
+      await audio.play();
+      setPlayingAssetId(assetId);
+    } catch {
+      toast.error("Could not play track.");
+      setPlayingAssetId(null);
+    }
+  }
+
   return (
     <section className="rounded-2xl border border-white/10 bg-[#101a35] p-4 md:p-5">
+      <audio ref={audioRef} preload="none" className="hidden">
+        <track kind="captions" srcLang="en" label="captions" src="data:text/vtt,WEBVTT" />
+      </audio>
+
       <div className="mb-4 flex items-center justify-between gap-2">
-        <p className="text-sm text-slate-300">Your generated tracks, organized like a music library.</p>
+        <p className="text-sm text-slate-300">Your generated tracks in a music-library view.</p>
         <Badge variant="secondary" className="bg-white/10 text-slate-100">{items.length} tracks</Badge>
       </div>
 
@@ -112,22 +202,25 @@ export function MyLibraryPanel({ initialItems }: { initialItems: LibraryItem[] }
           No tracks in your library yet. Create a cover to see it here.
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {items.map((item) => {
             const isEditing = editingAssetId === item.assetId;
             const busy = savingAssetId === item.assetId || deletingAssetId === item.assetId;
-
+            const loadingPlay = loadingPlayAssetId === item.assetId;
+            const playing = playingAssetId === item.assetId;
             return (
               <article
                 key={item.assetId}
-                className="relative overflow-hidden rounded-xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.03)_100%)] p-3"
+                className="relative flex min-h-[330px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.03)_100%)] p-3"
               >
-                <span className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-cyan-400 to-fuchsia-400" />
+                <div className="relative overflow-hidden rounded-xl border border-white/10">
+                  <VoiceLibraryCover voiceId={item.voiceId} alt={item.voiceName} />
+                </div>
 
-                <div className="ml-2">
+                <div className="mt-3 flex min-h-0 flex-1 flex-col">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-slate-100">{item.fileName}</div>
+                      <div className="line-clamp-2 text-lg font-semibold leading-tight text-slate-100">{item.fileName}</div>
                     </div>
 
                     <DropdownMenu>
@@ -200,8 +293,33 @@ export function MyLibraryPanel({ initialItems }: { initialItems: LibraryItem[] }
                     </div>
                   ) : null}
 
-                  <div className="mt-2 text-xs text-slate-300">Voice: {item.voiceName}</div>
-                  <div className="mt-1 text-xs text-slate-400">Created: {formatCreated(item.createdAt)}</div>
+                  <div className="mt-2 text-sm text-slate-200">{item.voiceName}</div>
+                  <div className="mt-1 text-xs text-slate-400">{formatCreated(item.createdAt)}</div>
+
+                  <div className="mt-auto pt-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void togglePlay(item);
+                      }}
+                      className={
+                        "inline-flex h-11 w-11 items-center justify-center rounded-full border transition-colors " +
+                        (playing
+                          ? "border-fuchsia-300/45 bg-fuchsia-500/20 text-fuchsia-100"
+                          : "border-cyan-300/40 bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/22")
+                      }
+                      disabled={busy || loadingPlay}
+                      aria-label={playing ? "Pause" : "Play"}
+                    >
+                      {loadingPlay ? (
+                        <LoaderCircle className="h-5 w-5 animate-spin" />
+                      ) : playing ? (
+                        <Pause className="h-5 w-5" />
+                      ) : (
+                        <Play className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
                 </div>
               </article>
             );
@@ -212,7 +330,29 @@ export function MyLibraryPanel({ initialItems }: { initialItems: LibraryItem[] }
   );
 }
 
+function VoiceLibraryCover({ voiceId, alt }: { voiceId: string; alt: string }) {
+  const [ok, setOk] = React.useState(true);
+  const src = `/api/voices/${encodeURIComponent(voiceId)}/cover`;
+
+  if (!ok) {
+    return (
+      <div className="grid aspect-[4/3] place-items-center bg-gradient-to-br from-cyan-500/20 to-fuchsia-500/20 text-slate-200">
+        <FileAudio className="h-8 w-8" />
+      </div>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      className="aspect-[4/3] w-full object-cover"
+      onError={() => setOk(false)}
+    />
+  );
+}
+
 function formatCreated(iso: string) {
-  const date = new Date(iso);
-  return date.toLocaleString();
+  return new Date(iso).toLocaleString();
 }
