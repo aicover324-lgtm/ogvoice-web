@@ -3,26 +3,27 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AudioLines, Menu, Mic2, Music3, LayoutDashboard, Settings, Trash2, PlusSquare } from "lucide-react";
+import { AudioLines, Library, Menu, Mic2, Music3, LayoutDashboard, Settings, Trash2, PlusSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 const nav = [
-  { href: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/app/create/new", label: "Create Voice", icon: PlusSquare },
-  { href: "/app/voices", label: "My Voices", icon: Mic2 },
-  { href: "/app/generate", label: "Generate Song", icon: Music3 },
-  { href: "/app/settings", label: "Settings", icon: Settings },
-  { href: "/app/voices/trash", label: "Trash", icon: Trash2 },
+  { href: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard, matchPath: "/app/dashboard" },
+  { href: "/app/create/new", label: "Create Voice", icon: PlusSquare, matchPath: "/app/create" },
+  { href: "/app/voices", label: "Clone Voice", icon: Mic2, matchPath: "/app/voices" },
+  { href: "/app/generate", label: "Generate Song", icon: Music3, matchPath: "/app/generate" },
+  { href: "/app/library", label: "My Library", icon: Library, matchPath: "/app/library" },
+  { href: "/app/settings", label: "Settings", icon: Settings, matchPath: "/app/settings" },
+  { href: "/app/voices/trash", label: "Trash", icon: Trash2, matchPath: "/app/voices/trash" },
 ];
 
 export function MobileNav() {
   const pathname = usePathname();
 
   const activeHref = React.useMemo(() => {
-    const matches = nav.filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
-    matches.sort((a, b) => b.href.length - a.href.length);
+    const matches = nav.filter((item) => pathname === item.matchPath || pathname.startsWith(`${item.matchPath}/`));
+    matches.sort((a, b) => b.matchPath.length - a.matchPath.length);
     return matches[0]?.href;
   }, [pathname]);
 

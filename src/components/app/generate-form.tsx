@@ -93,11 +93,13 @@ export function GenerateForm({
   initialVoiceProfileId,
   initialQueue,
   initialLibrary,
+  initialTab,
 }: {
   voices: Voice[];
   initialVoiceProfileId?: string | null;
   initialQueue: QueueItem[];
   initialLibrary: LibraryItem[];
+  initialTab?: "generate" | "library";
 }) {
   const defaultVoiceId =
     initialVoiceProfileId && voices.some((v) => v.id === initialVoiceProfileId)
@@ -148,6 +150,7 @@ export function GenerateForm({
   const mediaStreamRef = React.useRef<MediaStream | null>(null);
   const recordingChunksRef = React.useRef<BlobPart[]>([]);
   const recordingTimerRef = React.useRef<number | null>(null);
+  const myLibraryRef = React.useRef<HTMLElement | null>(null);
   const queueItemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const lastOutputAssetIdRef = React.useRef<string | null>(null);
 
@@ -167,6 +170,14 @@ export function GenerateForm({
       !!navigator.mediaDevices?.getUserMedia
     );
   }, []);
+
+  React.useEffect(() => {
+    if (initialTab !== "library") return;
+    const id = window.setTimeout(() => {
+      myLibraryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+    return () => window.clearTimeout(id);
+  }, [initialTab]);
 
   React.useEffect(() => {
     return () => {
@@ -1235,7 +1246,7 @@ export function GenerateForm({
       </aside>
       </div>
 
-      <section className="rounded-2xl border border-white/10 bg-[#101a35] p-4 md:p-5">
+      <section id="my-library" ref={myLibraryRef} className="rounded-2xl border border-white/10 bg-[#101a35] p-4 md:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h3 className="text-xl font-semibold tracking-tight text-white" style={{ fontFamily: "var(--font-heading)" }}>
