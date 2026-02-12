@@ -403,8 +403,8 @@ export function GenerateForm({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
-      <aside className="min-w-0 rounded-2xl border border-white/10 bg-[#11172b]">
+      <div className="grid items-start gap-6 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
+      <aside className="min-w-0 self-start rounded-2xl border border-white/10 bg-[#11172b]">
         <div className="border-b border-white/10 p-4">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
@@ -451,7 +451,7 @@ export function GenerateForm({
         </div>
       </aside>
 
-      <section className="min-w-0 space-y-5">
+      <section className="min-w-0 self-start space-y-5">
         <fieldset
           onDragEnter={(e) => {
             e.preventDefault();
@@ -800,7 +800,7 @@ export function GenerateForm({
         </div>
       </section>
 
-      <aside className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#11172b]">
+      <aside className="min-w-0 self-start overflow-hidden rounded-2xl border border-white/10 bg-[#11172b]">
         <div className="border-b border-white/10 p-5">
           <h3 className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
             Latest Result
