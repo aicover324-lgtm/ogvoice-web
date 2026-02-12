@@ -452,7 +452,7 @@ export function GenerateForm({
       </aside>
 
       <section className="min-w-0 self-start space-y-5">
-        <fieldset
+        <div
           onDragEnter={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -611,7 +611,7 @@ export function GenerateForm({
             {inputFileName ? `Selected: ${inputFileName}` : "No singing record selected yet."}
           </div>
           {inputAssetId ? <Badge className="mt-3">Singing record ready</Badge> : null}
-        </fieldset>
+        </div>
 
         <DatasetUploader
           ref={uploaderRef}

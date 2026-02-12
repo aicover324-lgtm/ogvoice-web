@@ -5,14 +5,13 @@ import { AppSidebar } from "@/components/app/app-sidebar";
 import { MobileNav } from "@/components/app/mobile-nav";
 import { UserMenu } from "@/components/app/user-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { FixedBorderGuard } from "@/components/app/fixed-border-guard";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/login");
 
   return (
-    <div className="og-app-shell min-h-dvh">
+    <div className="min-h-dvh">
       <div className="flex">
         <AppSidebar />
         <div className="flex min-h-dvh flex-1 flex-col">
@@ -31,7 +30,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               </div>
             </div>
           </header>
-          <FixedBorderGuard />
           <div className="flex-1">{children}</div>
         </div>
       </div>
