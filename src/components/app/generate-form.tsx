@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2, CloudUpload, Download, FileAudio, LoaderCircle, PlusCircle, Share2, Play, Pause } from "lucide-react";
+import { CheckCircle2, CloudUpload, Download, FileAudio, LoaderCircle, PlusCircle, Share2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +33,7 @@ type QueueItem = {
 };
 
 type UploadPanelState = {
-  phase: "idle" | "queued" | "uploading" | "confirming" | "done" | "error";
+  phase: "idle" | "queued" | "uploading" | "confirming" | "done" | "error" | "cancelled";
   progress: number;
   fileName: string | null;
   fileSize: number | null;
@@ -117,9 +117,7 @@ export function GenerateForm({
 
   const uploaderRef = React.useRef<DatasetUploaderHandle | null>(null);
   const localPreviewUrlRef = React.useRef<string | null>(null);
-  const playerRef = React.useRef<HTMLAudioElement | null>(null);
   const queueItemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
-  const [playing, setPlaying] = React.useState(false);
   const lastOutputAssetIdRef = React.useRef<string | null>(null);
 
   const selectedVoice = React.useMemo(() => voices.find((v) => v.id === voiceProfileId) || null, [voiceProfileId, voices]);
@@ -267,18 +265,6 @@ export function GenerateForm({
     el.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [activeResultJobId]);
 
-  function togglePlay() {
-    const p = playerRef.current;
-    if (!p || !outputUrl) return;
-    if (p.paused) {
-      void p.play().catch(() => {
-        toast.error("Could not play audio.");
-      });
-    } else {
-      p.pause();
-    }
-  }
-
   async function openQueueResult(item: QueueItem) {
     if (!item.outputAssetId) return;
     setActiveResultJobId(item.id);
@@ -425,11 +411,29 @@ export function GenerateForm({
 
           {uploadState.phase !== "idle" ? (
             <div className="mx-auto mt-5 max-w-xl text-left">
+              {uploadBusy ? (
+                <div className="mb-2 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      uploaderRef.current?.cancelUpload();
+                    }}
+                  >
+                    <X className="mr-1.5 h-3.5 w-3.5" />
+                    Cancel upload
+                  </Button>
+                </div>
+              ) : null}
               <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/10">
                 <div
                   className={cn(
                     "h-full rounded-full transition-all duration-400",
-                    uploadState.phase === "error"
+                    uploadState.phase === "error" || uploadState.phase === "cancelled"
                       ? "bg-red-400"
                       : uploadState.phase === "done"
                         ? "bg-emerald-400"
@@ -519,12 +523,22 @@ export function GenerateForm({
                     ? "border-cyan-300/35 bg-cyan-400/10 text-cyan-200"
                     : uploadState.phase === "done"
                       ? "border-emerald-300/35 bg-emerald-400/10 text-emerald-200"
-                      : uploadState.phase === "error"
+                    : uploadState.phase === "error"
                         ? "border-red-300/35 bg-red-400/10 text-red-200"
+                        : uploadState.phase === "cancelled"
+                          ? "border-red-300/35 bg-red-400/10 text-red-200"
                         : "border-white/20 text-slate-300"
                 )}
               >
-                {uploadBusy ? "Uploading" : uploadState.phase === "done" ? "Ready" : uploadState.phase === "error" ? "Upload failed" : "Selected"}
+                {uploadBusy
+                  ? "Uploading"
+                  : uploadState.phase === "done"
+                    ? "Ready"
+                    : uploadState.phase === "cancelled"
+                      ? "Cancelled"
+                      : uploadState.phase === "error"
+                        ? "Upload failed"
+                        : "Selected"}
               </Badge>
             </div>
 
@@ -639,25 +653,15 @@ export function GenerateForm({
               ))}
             </div>
 
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={togglePlay}
-                  disabled={!outputUrl}
-                  className="grid h-11 w-11 place-items-center rounded-full bg-white text-slate-900 transition-transform disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-                </button>
-                <div className="min-w-0">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-semibold">{outputFileName || "No result yet"}</div>
                   <div className="truncate text-xs text-muted-foreground">
                     {activeResultItem?.voiceName || selectedVoice?.name || "Cloned voice"}
                   </div>
-                </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="grid shrink-0 grid-cols-2 gap-2">
                 <Button
                   variant="outline"
                   size="icon"
@@ -693,11 +697,9 @@ export function GenerateForm({
             </div>
 
             <CustomAudioPlayer
-              ref={playerRef}
               src={outputUrl || null}
               preload="none"
               className="mt-3 w-full"
-              onPlayStateChange={setPlaying}
             />
 
             {outputUrl ? (
@@ -877,6 +879,7 @@ function uploadStatusText(state: UploadPanelState) {
   if (state.phase === "uploading") return "Uploading singing record...";
   if (state.phase === "confirming") return "Finalizing file...";
   if (state.phase === "done") return "Upload complete.";
+  if (state.phase === "cancelled") return "Upload cancelled.";
   if (state.phase === "error") return state.error || "Upload failed.";
   return "";
 }

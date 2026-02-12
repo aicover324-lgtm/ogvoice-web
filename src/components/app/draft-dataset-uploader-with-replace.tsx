@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Repeat2 } from "lucide-react";
+import { Repeat2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { DatasetUploader, type DatasetUploaderHandle } from "@/components/app/dataset-uploader";
+import { Button } from "@/components/ui/button";
+import { DatasetUploader, type DatasetUploaderHandle, type DatasetUploadState } from "@/components/app/dataset-uploader";
 import { PremiumCard } from "@/components/app/premium-card";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +54,7 @@ export function DraftDatasetUploaderWithReplace({
   const [draft, setDraft] = React.useState<DraftAsset | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [dragState, setDragState] = React.useState<"idle" | "valid" | "invalid">("idle");
+  const [uploadState, setUploadState] = React.useState<DatasetUploadState>({ phase: "idle", progress: 0 });
 
   const loadDraft = React.useCallback(async () => {
     setLoading(true);
@@ -106,6 +108,8 @@ export function DraftDatasetUploaderWithReplace({
   }
 
   const locked = !!draft;
+  const uploadBusy =
+    uploadState.phase === "queued" || uploadState.phase === "uploading" || uploadState.phase === "confirming";
   const heading = title || "1. Singing Record";
 
   return (
@@ -121,6 +125,21 @@ export function DraftDatasetUploaderWithReplace({
       </div>
 
       <div className="mt-3">
+        {uploadBusy ? (
+          <div className="mb-3 flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer"
+              onClick={() => uploaderRef.current?.cancelUpload()}
+            >
+              <X className="mr-1.5 h-3.5 w-3.5" />
+              Cancel upload
+            </Button>
+          </div>
+        ) : null}
+
         {locked ? (
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-3">
             <div className="min-w-0">
@@ -228,6 +247,9 @@ export function DraftDatasetUploaderWithReplace({
           onAssetCreated={async () => {
             await loadDraft();
             toast.success("Singing record uploaded.");
+          }}
+          onUploadStateChange={(state) => {
+            setUploadState(state);
           }}
         />
       </div>

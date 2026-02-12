@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { UploadCloud } from "lucide-react";
+import { UploadCloud, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -40,15 +40,23 @@ function formatBytes(n: number) {
 export type DatasetUploaderHandle = {
   openPicker: () => void;
   uploadFiles: (files: FileList | File[]) => Promise<void>;
+  cancelUpload: () => void;
 };
 
 export type DatasetUploadState = {
-  phase: "idle" | "queued" | "uploading" | "confirming" | "done" | "error";
+  phase: "idle" | "queued" | "uploading" | "confirming" | "done" | "error" | "cancelled";
   progress: number;
   fileName?: string;
   fileSize?: number;
   error?: string;
 };
+
+class UploadCancelledError extends Error {
+  constructor() {
+    super("UPLOAD_CANCELLED");
+    this.name = "UploadCancelledError";
+  }
+}
 
 export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
   voiceProfileId?: string;
@@ -89,6 +97,8 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const [items, setItems] = React.useState<UploadItem[]>([]);
   const [busy, setBusy] = React.useState(false);
+  const currentXhrRef = React.useRef<XMLHttpRequest | null>(null);
+  const currentItemIdRef = React.useRef<string | null>(null);
 
   async function processFiles(fileList: FileList | File[]) {
     const files = Array.isArray(fileList) ? fileList : Array.from(fileList);
@@ -149,19 +159,33 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
       }
       onComplete?.();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Upload failed");
+      if (e instanceof UploadCancelledError) {
+        toast.message("Upload cancelled.");
+      } else {
+        toast.error(e instanceof Error ? e.message : "Upload failed");
+      }
     } finally {
+      currentXhrRef.current = null;
+      currentItemIdRef.current = null;
       setBusy(false);
       if (inputRef.current) inputRef.current.value = "";
     }
   }
 
+  function cancelUpload() {
+    const xhr = currentXhrRef.current;
+    if (!xhr) return;
+    xhr.abort();
+  }
+
   React.useImperativeHandle(ref, () => ({
     openPicker: () => inputRef.current?.click(),
     uploadFiles: (files) => processFiles(files),
+    cancelUpload,
   }));
 
   async function uploadFile(file: File, itemId: string) {
+    currentItemIdRef.current = itemId;
     setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, status: "uploading", progress: 1 } : it)));
     onUploadStateChange?.({
       phase: "uploading",
@@ -204,6 +228,7 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
 
     await new Promise<void>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
+      currentXhrRef.current = xhr;
       xhr.open("PUT", uploadUrl);
       Object.entries(requiredHeaders || {}).forEach(([k, v]) => {
         xhr.setRequestHeader(k, v);
@@ -224,8 +249,21 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
         else reject(new Error(`Upload failed (${xhr.status})`));
       };
       xhr.onerror = () => reject(new Error("Upload failed"));
+      xhr.onabort = () => {
+        setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, status: "error", error: "Upload cancelled" } : it)));
+        onUploadStateChange?.({
+          phase: "cancelled",
+          progress: 0,
+          fileName: file.name,
+          fileSize: file.size,
+          error: "Upload cancelled",
+        });
+        reject(new UploadCancelledError());
+      };
       xhr.send(file);
     });
+
+    currentXhrRef.current = null;
 
     setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, status: "confirming", progress: 95 } : it)));
     onUploadStateChange?.({
@@ -277,6 +315,19 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
     await processFiles(files);
   }
 
+  React.useEffect(() => {
+    return () => {
+      if (currentXhrRef.current) currentXhrRef.current.abort();
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (!busy) return;
+    return () => {
+      if (currentXhrRef.current) currentXhrRef.current.abort();
+    };
+  }, [busy]);
+
 
   const chrome = ui !== "minimal";
 
@@ -297,6 +348,17 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
           ) : null}
         </div>
         <div className="flex items-center gap-2">
+          {busy ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              onClick={cancelUpload}
+            >
+              <X className="mr-2 h-4 w-4" />
+              Cancel upload
+            </Button>
+          ) : null}
           {hideButton ? null : (
             <Button
               type="button"
