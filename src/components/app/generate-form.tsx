@@ -6,6 +6,7 @@ import { CheckCircle2, CloudUpload, Download, FileAudio, LoaderCircle, Mic, Plus
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { VoiceCoverThumb } from "@/components/app/voice-cover-thumb";
 import { CustomAudioPlayer } from "@/components/app/custom-audio-player";
 import { DatasetUploader, type DatasetUploaderHandle, type DatasetUploadState } from "@/components/app/dataset-uploader";
 import { cn } from "@/lib/utils";
@@ -433,9 +434,7 @@ export function GenerateForm({
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <div className="grid h-11 w-11 place-items-center rounded-full border border-white/15 bg-gradient-to-br from-cyan-500/25 to-fuchsia-500/25 font-semibold">
-                    {initials(voice.name)}
-                  </div>
+                  <VoiceCoverThumb voiceId={voice.id} size={44} className="overflow-hidden rounded-full border border-white/15" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-semibold">{voice.name}</div>
                     <div className="truncate text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
@@ -991,13 +990,6 @@ function queueStatusLabel(status: QueueItem["status"]) {
   if (status === "running") return "Converting";
   if (status === "succeeded") return "Done";
   return "Stopped";
-}
-
-function initials(name: string) {
-  const chunks = name.trim().split(/\s+/).filter(Boolean);
-  if (chunks.length === 0) return "VC";
-  if (chunks.length === 1) return chunks[0]!.slice(0, 2).toUpperCase();
-  return `${chunks[0]![0] || ""}${chunks[1]![0] || ""}`.toUpperCase();
 }
 
 function isValidAudioFile(file: File) {
