@@ -44,6 +44,7 @@ type UploadPanelState = {
 type DebugBorderRow = {
   id: string;
   kind: "border" | "hairline" | "pseudo";
+  hasShadow: boolean;
   color: string;
   tag: string;
   position: string;
@@ -469,6 +470,7 @@ export function GenerateForm({
 
         const style = window.getComputedStyle(el);
         const hasBorderClass = (el.className || "").toString().includes("border");
+        const hasShadow = style.boxShadow !== "none";
         const borderWidth =
           parsePx(style.borderTopWidth) +
           parsePx(style.borderRightWidth) +
@@ -486,7 +488,7 @@ export function GenerateForm({
           rect.height <= 4 &&
           (borderWidth > 0 || style.backgroundColor !== "rgba(0, 0, 0, 0)" || style.boxShadow !== "none");
 
-        const shouldMark = borderWidth > 0 || hasBorderClass || hairline || pseudoLine;
+        const shouldMark = borderWidth > 0 || hasBorderClass || hasShadow || hairline || pseudoLine;
         if (!shouldMark) continue;
 
         const id = `dbg-${rows.length + 1}`;
@@ -500,13 +502,16 @@ export function GenerateForm({
         if (borderWidth > 0 || hasBorderClass) {
           el.style.setProperty("border-color", color, "important");
         }
-        if (hairline && borderWidth <= 0) {
+        if (hasShadow) {
+          el.style.setProperty("box-shadow", `0 0 0 3px ${color}, inset 0 0 0 2px ${color}`, "important");
+        } else if (hairline && borderWidth <= 0) {
           el.style.setProperty("box-shadow", `inset 0 0 0 2px ${color}`, "important");
         }
 
         rows.push({
           id,
           kind: pseudoLine ? "pseudo" : hairline ? "hairline" : "border",
+          hasShadow,
           color,
           tag: el.tagName,
           position: style.position,
@@ -1148,6 +1153,7 @@ export function GenerateForm({
               <th className="px-2 py-1">Kind</th>
               <th className="px-2 py-1">Color</th>
               <th className="px-2 py-1">Tag</th>
+              <th className="px-2 py-1">Shadow</th>
               <th className="px-2 py-1">Pos</th>
               <th className="px-2 py-1">Top/Bottom</th>
               <th className="px-2 py-1">Size</th>
@@ -1166,6 +1172,7 @@ export function GenerateForm({
                   </span>
                 </td>
                 <td className="px-2 py-1 font-mono">{row.tag}</td>
+                <td className="px-2 py-1 font-mono">{row.hasShadow ? "yes" : "no"}</td>
                 <td className="px-2 py-1 font-mono">{row.position}</td>
                 <td className="px-2 py-1 font-mono">{row.top}/{row.bottom}</td>
                 <td className="px-2 py-1 font-mono">{row.width}x{row.height}</td>
