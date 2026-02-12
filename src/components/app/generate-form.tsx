@@ -43,6 +43,7 @@ type UploadPanelState = {
 
 type DebugBorderRow = {
   id: string;
+  kind: "container" | "hairline";
   color: string;
   tag: string;
   position: string;
@@ -431,8 +432,14 @@ export function GenerateForm({
       if (!hasBorderClass && borderWidth <= 0) continue;
 
       const rect = el.getBoundingClientRect();
-      if (rect.width < 220 || rect.height < 56) continue;
-      if (rect.width > window.innerWidth * 0.98 && rect.height > window.innerHeight * 0.95) continue;
+      const isHairline =
+        rect.width >= window.innerWidth * 0.6 &&
+        rect.height <= 8 &&
+        (borderWidth > 0 || style.backgroundColor !== "rgba(0, 0, 0, 0)" || style.boxShadow !== "none");
+
+      const isContainer = rect.width >= 220 && rect.height >= 56;
+      if (!isHairline && !isContainer) continue;
+      if (isContainer && rect.width > window.innerWidth * 0.98 && rect.height > window.innerHeight * 0.95) continue;
       if ((el.className || "").toString().includes("Generate Border Debug Table")) continue;
 
       const id = `dbg-${rows.length + 1}`;
@@ -445,6 +452,7 @@ export function GenerateForm({
 
       rows.push({
         id,
+        kind: isHairline ? "hairline" : "container",
         color,
         tag: el.tagName,
         position: style.position,
@@ -1055,12 +1063,13 @@ export function GenerateForm({
 
       <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#11172b] p-4">
         <div className="mb-3 text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
-          Generate Border Debug Table
+          Generate Border Debug Table (Containers + Hairlines)
         </div>
         <table className="w-full min-w-[760px] text-left text-xs">
           <thead className="text-muted-foreground">
             <tr>
               <th className="px-2 py-1">ID</th>
+              <th className="px-2 py-1">Kind</th>
               <th className="px-2 py-1">Color</th>
               <th className="px-2 py-1">Tag</th>
               <th className="px-2 py-1">Pos</th>
@@ -1073,6 +1082,7 @@ export function GenerateForm({
             {debugBorders.map((row) => (
               <tr key={row.id} className="border-t border-white/10 align-top">
                 <td className="px-2 py-1 font-mono">{row.id}</td>
+                <td className="px-2 py-1 font-mono uppercase">{row.kind}</td>
                 <td className="px-2 py-1">
                   <span className="inline-flex items-center gap-2">
                     <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: row.color }} />
