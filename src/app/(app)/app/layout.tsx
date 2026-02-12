@@ -13,7 +13,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-dvh">
       <div className="flex">
-        <AppSidebar userName={session.user.name || session.user.email || "Creator"} />
+        <AppSidebar />
         <div className="flex min-h-dvh flex-1 flex-col">
           <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur">
             <div className="flex h-16 items-center justify-between px-4">

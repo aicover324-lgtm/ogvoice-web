@@ -16,7 +16,7 @@ const nav = [
   { href: "/app/voices/trash", label: "Trash", icon: Trash2, matchPath: "/app/voices/trash" },
 ];
 
-export function AppSidebar({ userName }: { userName?: string | null }) {
+export function AppSidebar() {
   const pathname = usePathname();
 
   const activeHref = React.useMemo(() => {
@@ -24,9 +24,6 @@ export function AppSidebar({ userName }: { userName?: string | null }) {
     matches.sort((a, b) => b.matchPath.length - a.matchPath.length);
     return matches[0]?.href;
   }, [pathname]);
-
-  const displayName = userName?.trim() || "Creator";
-  const shortName = initials(displayName);
 
   return (
     <aside className="hidden min-h-dvh w-72 shrink-0 flex-col border-r border-white/10 bg-[linear-gradient(180deg,#070d24_0%,#060b1e_100%)] text-slate-200 md:flex">
@@ -72,36 +69,6 @@ export function AppSidebar({ userName }: { userName?: string | null }) {
           );
         })}
       </nav>
-
-      <div className="mt-auto p-4">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-          <div className="flex items-center gap-2.5">
-            <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-cyan-500/35 to-fuchsia-500/35 text-sm font-semibold text-white">
-              {shortName}
-            </div>
-            <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-white">{displayName}</div>
-              <div className="text-xs text-slate-400">Creator Plan</div>
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-[0.14em] text-slate-400">
-              <span>Storage</span>
-              <span>6.2 / 10 GB</span>
-            </div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-              <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-400" style={{ width: "62%" }} />
-            </div>
-          </div>
-        </div>
-      </div>
     </aside>
   );
-}
-
-function initials(name: string) {
-  const chunks = name.split(/\s+/).filter(Boolean);
-  if (chunks.length === 0) return "OG";
-  if (chunks.length === 1) return chunks[0]!.slice(0, 2).toUpperCase();
-  return `${chunks[0]![0] || ""}${chunks[1]![0] || ""}`.toUpperCase();
 }
