@@ -293,18 +293,6 @@
     padding: 2.5rem 1rem;
   }
 
-  .og-app-shell::after {
-    content: "";
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 1px;
-    background: #040a1a;
-    pointer-events: none;
-    z-index: 2147483647;
-  }
-
   .og-glow-layer {
     pointer-events: none;
     position: absolute;
