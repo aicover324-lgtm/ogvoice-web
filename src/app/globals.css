@@ -125,7 +125,21 @@
     font-family: var(--font-body);
   }
   iframe {
+    border: 0 !important;
+  }
+  iframe[style*="position: fixed"] {
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  [style*="position: fixed"][style*="bottom: 0"][style*="left: 0"][style*="right: 0"] {
+    border-top: 0 !important;
+    box-shadow: none !important;
+  }
+  hr {
     border: 0;
+  }
+  legend {
+    padding: 0;
   }
   fieldset {
     min-inline-size: 0;
