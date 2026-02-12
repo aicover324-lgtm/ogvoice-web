@@ -41,7 +41,7 @@ export function AppSidebar() {
         </Link>
       </div>
 
-      <nav className="flex flex-1 flex-col px-3 py-2">
+      <nav className="px-3 py-2">
         {nav.map((item) => {
           const active = activeHref === item.href;
           const Icon = item.icon;
@@ -51,7 +51,6 @@ export function AppSidebar() {
               href={item.href}
               className={cn(
                 "mb-1.5 flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition-all",
-                item.href === "/app/voices/trash" ? "mt-auto" : "",
                 active
                   ? "border-cyan-300/25 bg-gradient-to-r from-cyan-500/18 to-fuchsia-500/15 text-cyan-100 shadow-[0_8px_24px_rgba(34,211,238,0.2)]"
                   : "border-transparent text-slate-300 hover:border-white/10 hover:bg-white/[0.04] hover:text-white"
