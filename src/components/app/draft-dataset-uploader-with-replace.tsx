@@ -109,7 +109,10 @@ export function DraftDatasetUploaderWithReplace({
 
   const locked = !!draft;
   const uploadBusy =
-    uploadState.phase === "queued" || uploadState.phase === "uploading" || uploadState.phase === "confirming";
+    uploadState.phase === "queued" ||
+    uploadState.phase === "uploading" ||
+    uploadState.phase === "confirming" ||
+    uploadState.phase === "optimizing";
   const heading = title || "1. Singing Record";
 
   return (
@@ -138,6 +141,10 @@ export function DraftDatasetUploaderWithReplace({
               Cancel upload
             </Button>
           </div>
+        ) : null}
+
+        {uploadState.phase === "optimizing" ? (
+          <div className="mb-3 text-xs font-medium text-cyan-200">Optimizing your recording...</div>
         ) : null}
 
         {locked ? (

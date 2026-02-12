@@ -15,6 +15,10 @@ const allowedAudioMime = new Set([
   "audio/mp3",
   "audio/flac",
   "audio/x-flac",
+  "audio/webm",
+  "audio/ogg",
+  "audio/mp4",
+  "audio/aac",
 ]);
 
 const allowedImageMime = new Set([
@@ -46,9 +50,10 @@ export async function POST(req: Request) {
   if (!parsed.success) return err("INVALID_INPUT", "Invalid upload presign payload", 400, parsed.error.flatten());
 
   const { fileName, fileSize, mimeType, voiceProfileId, type } = parsed.data;
+  const baseMimeType = mimeType.toLowerCase().split(";")[0]?.trim() || mimeType.toLowerCase();
   if (type === "dataset_audio" || type === "song_input") {
-    if (!allowedAudioMime.has(mimeType)) {
-      return err("UNSUPPORTED_TYPE", "Only wav/mp3/flac audio is allowed", 415);
+    if (!allowedAudioMime.has(baseMimeType)) {
+      return err("UNSUPPORTED_TYPE", "Only wav/mp3/flac/webm audio is allowed", 415);
     }
   } else {
     if (!allowedImageMime.has(mimeType)) {

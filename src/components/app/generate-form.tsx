@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2, CloudUpload, Download, FileAudio, LoaderCircle, PlusCircle, Share2, X } from "lucide-react";
+import { CheckCircle2, CloudUpload, Download, FileAudio, LoaderCircle, Mic, PlusCircle, Share2, Square, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +33,7 @@ type QueueItem = {
 };
 
 type UploadPanelState = {
-  phase: "idle" | "queued" | "uploading" | "confirming" | "done" | "error" | "cancelled";
+  phase: "idle" | "queued" | "uploading" | "confirming" | "optimizing" | "done" | "error" | "cancelled";
   progress: number;
   fileName: string | null;
   fileSize: number | null;
@@ -114,21 +114,50 @@ export function GenerateForm({
   const [loadingOutput, setLoadingOutput] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [dragState, setDragState] = React.useState<"idle" | "valid" | "invalid">("idle");
+  const [recordSupported, setRecordSupported] = React.useState(false);
+  const [recording, setRecording] = React.useState(false);
+  const [recordingStarting, setRecordingStarting] = React.useState(false);
+  const [recordingElapsedSec, setRecordingElapsedSec] = React.useState(0);
 
   const uploaderRef = React.useRef<DatasetUploaderHandle | null>(null);
   const localPreviewUrlRef = React.useRef<string | null>(null);
+  const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = React.useRef<MediaStream | null>(null);
+  const recordingChunksRef = React.useRef<BlobPart[]>([]);
+  const recordingTimerRef = React.useRef<number | null>(null);
   const queueItemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const lastOutputAssetIdRef = React.useRef<string | null>(null);
 
   const selectedVoice = React.useMemo(() => voices.find((v) => v.id === voiceProfileId) || null, [voiceProfileId, voices]);
   const uploadBusy =
-    uploadState.phase === "queued" || uploadState.phase === "uploading" || uploadState.phase === "confirming";
+    uploadState.phase === "queued" ||
+    uploadState.phase === "uploading" ||
+    uploadState.phase === "confirming" ||
+    uploadState.phase === "optimizing";
+  const recordingBusy = recording || recordingStarting;
+  const uploadPanelBlocked = uploadBusy || recordingBusy;
+
+  React.useEffect(() => {
+    setRecordSupported(
+      typeof window !== "undefined" &&
+      typeof MediaRecorder !== "undefined" &&
+      !!navigator.mediaDevices?.getUserMedia
+    );
+  }, []);
 
   React.useEffect(() => {
     return () => {
       if (localPreviewUrlRef.current) {
         URL.revokeObjectURL(localPreviewUrlRef.current);
       }
+      if (recordingTimerRef.current) {
+        window.clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+      stopMediaTracks(mediaStreamRef.current);
     };
   }, []);
 
@@ -139,6 +168,10 @@ export function GenerateForm({
     }
     if (uploadBusy) {
       toast.error("Please wait until upload is complete.");
+      return;
+    }
+    if (recordingBusy) {
+      toast.error("Stop recording first.");
       return;
     }
     if (!inputAssetId) {
@@ -271,6 +304,77 @@ export function GenerateForm({
     await fetchOutputUrl(item.outputAssetId, item.outputFileName || null);
   }
 
+  async function startLiveRecording() {
+    if (!recordSupported) {
+      toast.error("Live recording is not supported in this browser.");
+      return;
+    }
+    if (uploadBusy) {
+      toast.error("Please wait for the current upload to finish.");
+      return;
+    }
+    setRecordingStarting(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = pickRecordingMimeType();
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+
+      mediaStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+      recordingChunksRef.current = [];
+
+      recorder.ondataavailable = (evt) => {
+        if (evt.data && evt.data.size > 0) recordingChunksRef.current.push(evt.data);
+      };
+
+      recorder.onstop = () => {
+        const chunks = recordingChunksRef.current;
+        recordingChunksRef.current = [];
+        const finalType = recorder.mimeType || mimeType || "audio/webm";
+
+        if (recordingTimerRef.current) {
+          window.clearInterval(recordingTimerRef.current);
+          recordingTimerRef.current = null;
+        }
+        setRecording(false);
+        setRecordingElapsedSec(0);
+        mediaRecorderRef.current = null;
+        stopMediaTracks(mediaStreamRef.current);
+        mediaStreamRef.current = null;
+
+        if (chunks.length === 0) return;
+
+        const blob = new Blob(chunks, { type: finalType });
+        const file = new File([blob], `live-recording-${Date.now()}.${recordingExtForMime(finalType)}`, { type: finalType });
+        void uploaderRef.current?.uploadFiles([file]);
+      };
+
+      recorder.start(300);
+      setRecording(true);
+      setRecordingElapsedSec(0);
+      recordingTimerRef.current = window.setInterval(() => {
+        setRecordingElapsedSec((prev) => prev + 1);
+      }, 1000);
+      toast.success("Recording started.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not start recording.");
+      stopMediaTracks(mediaStreamRef.current);
+      mediaStreamRef.current = null;
+      mediaRecorderRef.current = null;
+    } finally {
+      setRecordingStarting(false);
+    }
+  }
+
+  function stopLiveRecording() {
+    const rec = mediaRecorderRef.current;
+    if (!rec) return;
+    if (rec.state !== "inactive") {
+      rec.stop();
+      toast.message("Recording stopped. Uploading now...");
+    }
+  }
+
   const conversionsToday = React.useMemo(() => {
     const today = new Date();
     const y = today.getFullYear();
@@ -283,7 +387,7 @@ export function GenerateForm({
     }).length;
   }, [queue]);
   const dailyLimit = 50;
-  const canCreateCover = !!inputAssetId && !uploadBusy && !loading;
+  const canCreateCover = !!inputAssetId && !uploadBusy && !recordingBusy && !loading;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
@@ -340,7 +444,7 @@ export function GenerateForm({
         <button
           type="button"
           onClick={() => {
-            if (uploadBusy) return;
+            if (uploadPanelBlocked) return;
             uploaderRef.current?.openPicker();
           }}
           onDragEnter={(e) => {
@@ -372,8 +476,8 @@ export function GenerateForm({
               toast.error("Only wav, mp3, or flac singing records are allowed.");
               return;
             }
-            if (uploadBusy) {
-              toast.error("Please wait for the current upload to finish.");
+            if (uploadPanelBlocked) {
+              toast.error(recordingBusy ? "Stop recording first." : "Please wait for the current upload to finish.");
               return;
             }
             void uploaderRef.current?.uploadFiles([file]);
@@ -381,17 +485,23 @@ export function GenerateForm({
           className={cn(
             "rounded-2xl border-2 border-dashed bg-[#171d33] p-10 text-center transition-colors",
             dragState === "valid" ? "border-cyan-400/70" : dragState === "invalid" ? "border-red-500/60" : "border-white/20",
-            dragState === "invalid" || uploadBusy ? "cursor-not-allowed" : "cursor-pointer",
+            dragState === "invalid" || uploadPanelBlocked ? "cursor-not-allowed" : "cursor-pointer",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
           )}
         >
           <div
             className={cn(
               "mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-cyan-500/15 text-cyan-300",
-              uploadBusy ? "animate-pulse" : ""
+              uploadBusy || recordingBusy ? "animate-pulse" : ""
             )}
           >
-            {uploadBusy ? <LoaderCircle className="h-7 w-7 animate-spin" /> : <CloudUpload className="h-7 w-7" />}
+            {uploadBusy ? (
+              <LoaderCircle className="h-7 w-7 animate-spin" />
+            ) : recordingBusy ? (
+              <Mic className="h-7 w-7" />
+            ) : (
+              <CloudUpload className="h-7 w-7" />
+            )}
           </div>
           <h3 className="text-3xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
             Upload Singing Record
@@ -405,7 +515,7 @@ export function GenerateForm({
               {uploadBusy ? "Uploading..." : "Select File"}
             </span>
             <span className="inline-flex h-10 items-center rounded-xl border border-white/15 bg-white/5 px-7 text-sm font-semibold text-muted-foreground">
-              Record Live (Soon)
+              Record Live
             </span>
           </div>
 
@@ -456,6 +566,38 @@ export function GenerateForm({
           </div>
           {inputAssetId ? <Badge className="mt-3">Singing record ready</Badge> : null}
         </button>
+
+        <div className="rounded-2xl border border-white/10 bg-[#171d33] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="text-sm text-slate-300">
+              {recordSupported
+                ? recording
+                  ? `Recording... ${formatClock(recordingElapsedSec)}`
+                  : "Record with your microphone and use it instantly."
+                : "Live recording is not available in this browser."}
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              className={cn(
+                "rounded-full border-white/20 bg-white/5 text-slate-100 disabled:pointer-events-auto disabled:cursor-not-allowed",
+                recording ? "hover:bg-red-500/20 hover:text-red-100" : "hover:bg-white/10"
+              )}
+              disabled={!recordSupported || uploadBusy || recordingStarting}
+              onClick={() => {
+                if (recording) {
+                  stopLiveRecording();
+                  return;
+                }
+                void startLiveRecording();
+              }}
+            >
+              {recording ? <Square className="mr-2 h-4 w-4" /> : <Mic className="mr-2 h-4 w-4" />}
+              {recording ? "Stop recording" : recordingStarting ? "Starting mic..." : "Record Live"}
+            </Button>
+          </div>
+        </div>
 
         <DatasetUploader
           ref={uploaderRef}
@@ -846,6 +988,40 @@ function isValidAudioFile(file: File) {
   return AUDIO_ALLOWED_MIME.has(file.type.toLowerCase());
 }
 
+function stopMediaTracks(stream: MediaStream | null) {
+  if (!stream) return;
+  for (const track of stream.getTracks()) {
+    try {
+      track.stop();
+    } catch {
+      // Ignore stop failures.
+    }
+  }
+}
+
+function pickRecordingMimeType() {
+  if (typeof MediaRecorder === "undefined") return null;
+  const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"];
+  for (const t of candidates) {
+    if (MediaRecorder.isTypeSupported(t)) return t;
+  }
+  return null;
+}
+
+function recordingExtForMime(mime: string) {
+  const lower = mime.toLowerCase();
+  if (lower.includes("ogg")) return "ogg";
+  if (lower.includes("mp4") || lower.includes("m4a")) return "m4a";
+  return "webm";
+}
+
+function formatClock(sec: number) {
+  const safe = Math.max(0, Math.floor(sec));
+  const m = Math.floor(safe / 60);
+  const s = safe % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
 function draggedAudioState(dt: DataTransfer): "valid" | "invalid" | "unknown" {
   const items = Array.from(dt.items || []);
   const fileItems = items.filter((item) => item.kind === "file");
@@ -878,6 +1054,7 @@ function uploadStatusText(state: UploadPanelState) {
   if (state.phase === "queued") return "Preparing upload...";
   if (state.phase === "uploading") return "Uploading singing record...";
   if (state.phase === "confirming") return "Finalizing file...";
+  if (state.phase === "optimizing") return "Optimizing your recording...";
   if (state.phase === "done") return "Upload complete.";
   if (state.phase === "cancelled") return "Upload cancelled.";
   if (state.phase === "error") return state.error || "Upload failed.";

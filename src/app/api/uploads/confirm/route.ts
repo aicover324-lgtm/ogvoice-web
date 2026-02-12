@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { spawn } from "node:child_process";
+import { promises as fs } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -21,6 +25,8 @@ const schema = z.object({
 
 const datasetAllowedMime = new Set(["audio/wav", "audio/x-wav"]);
 const imageAllowedMime = new Set(["image/jpeg", "image/png", "image/webp"]);
+const TARGET_DATASET_SAMPLE_RATE = 32000;
+const TARGET_DATASET_CHANNELS = 1;
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -31,6 +37,8 @@ export async function POST(req: Request) {
   if (!parsed.success) return err("INVALID_INPUT", "Invalid upload confirm payload", 400, parsed.error.flatten());
 
   const { voiceProfileId, type, fileName, fileSize, mimeType, storageKey } = parsed.data;
+  let effectiveFileSize = fileSize;
+  let effectiveMimeType = mimeType;
 
   if (type === "dataset_audio" && voiceProfileId) {
     return err(
@@ -124,6 +132,50 @@ export async function POST(req: Request) {
     const expected = `${userPrefix}/drafts/dataset/`;
     if (!storageKey.startsWith(expected)) {
       return err("INVALID_STORAGE_KEY", "Invalid dataset upload key", 403);
+    }
+  }
+
+  // Audio optimization pipeline for dataset uploads.
+  // Target format for RVC: 32000 Hz, mono, 16-bit PCM WAV.
+  if (type === "dataset_audio") {
+    try {
+      const uploaded = await getObjectBytes({ key: storageKey, maxBytes: fileSize + 1024 * 1024 });
+      const optimized = await optimizeDatasetWav(uploaded);
+      await putObjectBytes({
+        key: storageKey,
+        bytes: optimized,
+        contentType: "audio/wav",
+        cacheControl: "private, no-cache",
+      });
+      effectiveFileSize = optimized.length;
+      effectiveMimeType = "audio/wav";
+
+      try {
+        await prisma.auditLog.create({
+          data: {
+            userId: session.user.id,
+            action: "dataset.optimized",
+            meta: {
+              storageKey,
+              inputBytes: uploaded.length,
+              outputBytes: optimized.length,
+              sampleRate: TARGET_DATASET_SAMPLE_RATE,
+              channels: TARGET_DATASET_CHANNELS,
+              bitDepth: 16,
+            },
+          },
+        });
+      } catch {
+        // Ignore audit failures.
+      }
+    } catch (e) {
+      return err(
+        "DATASET_OPTIMIZE_FAILED",
+        e instanceof Error
+          ? `Could not optimize your recording: ${e.message}`
+          : "Could not optimize your recording. Please re-upload and try again.",
+        500
+      );
     }
   }
 
@@ -234,16 +286,16 @@ export async function POST(req: Request) {
   let asset: { id: string };
   try {
     asset = await prisma.uploadAsset.create({
-      data: {
-        userId: session.user.id,
-        voiceProfileId: resolvedVoiceId,
-        type,
-        fileName,
-        fileSize,
-        mimeType,
-        storageKey,
-      },
-    });
+        data: {
+          userId: session.user.id,
+          voiceProfileId: resolvedVoiceId,
+          type,
+          fileName,
+          fileSize: effectiveFileSize,
+          mimeType: effectiveMimeType,
+          storageKey,
+        },
+      });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002" && type === "dataset_audio") {
       return err(
@@ -267,3 +319,57 @@ export async function POST(req: Request) {
 }
 
 export const runtime = "nodejs";
+
+async function optimizeDatasetWav(input: Buffer) {
+  const base = `ogvoice_${crypto.randomUUID()}`;
+  const inPath = path.join(tmpdir(), `${base}_in.wav`);
+  const outPath = path.join(tmpdir(), `${base}_out.wav`);
+
+  try {
+    await fs.writeFile(inPath, input);
+    await runFfmpeg([
+      "-y",
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-i",
+      inPath,
+      "-ar",
+      String(TARGET_DATASET_SAMPLE_RATE),
+      "-ac",
+      String(TARGET_DATASET_CHANNELS),
+      "-c:a",
+      "pcm_s16le",
+      outPath,
+    ]);
+
+    const out = await fs.readFile(outPath);
+    if (out.length < 44) {
+      throw new Error("Optimized file is invalid.");
+    }
+    return out;
+  } finally {
+    await Promise.allSettled([fs.unlink(inPath), fs.unlink(outPath)]);
+  }
+}
+
+async function runFfmpeg(args: string[]) {
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn("ffmpeg", args, { stdio: ["ignore", "ignore", "pipe"] });
+    let stderr = "";
+
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    child.on("error", (e) => reject(new Error(`ffmpeg launch failed: ${e.message}`)));
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+      const msg = stderr.trim();
+      reject(new Error(msg || `ffmpeg failed with code ${code}`));
+    });
+  });
+}

@@ -13,7 +13,7 @@ type UploadItem = {
   name: string;
   size: number;
   progress: number;
-  status: "queued" | "uploading" | "confirming" | "done" | "error";
+  status: "queued" | "uploading" | "confirming" | "optimizing" | "done" | "error";
   error?: string;
 };
 
@@ -44,7 +44,7 @@ export type DatasetUploaderHandle = {
 };
 
 export type DatasetUploadState = {
-  phase: "idle" | "queued" | "uploading" | "confirming" | "done" | "error" | "cancelled";
+  phase: "idle" | "queued" | "uploading" | "confirming" | "optimizing" | "done" | "error" | "cancelled";
   progress: number;
   fileName?: string;
   fileSize?: number;
@@ -265,9 +265,11 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
 
     currentXhrRef.current = null;
 
-    setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, status: "confirming", progress: 95 } : it)));
+    const postUploadStatus = type === "dataset_audio" ? "optimizing" : "confirming";
+    const postUploadPhase = type === "dataset_audio" ? "optimizing" : "confirming";
+    setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, status: postUploadStatus, progress: 95 } : it)));
     onUploadStateChange?.({
-      phase: "confirming",
+      phase: postUploadPhase,
       progress: 95,
       fileName: file.name,
       fileSize: file.size,
@@ -345,6 +347,9 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
           </div>
           {disabledReason ? (
             <div className="mt-2 text-xs text-muted-foreground">{disabledReason}</div>
+          ) : null}
+          {type === "dataset_audio" && items.some((it) => it.status === "optimizing") ? (
+            <div className="mt-2 text-xs font-medium text-cyan-200">Optimizing your recording...</div>
           ) : null}
         </div>
         <div className="flex items-center gap-2">
