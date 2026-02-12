@@ -32,7 +32,12 @@ export function RestoreVoiceButton({ voiceId }: { voiceId: string }) {
   }
 
   return (
-    <Button variant="outline" className="rounded-full" onClick={restore} disabled={loading}>
+    <Button
+      variant="outline"
+      className="rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 disabled:pointer-events-auto disabled:cursor-not-allowed"
+      onClick={restore}
+      disabled={loading}
+    >
       {loading ? "Restoring..." : "Restore"}
     </Button>
   );
