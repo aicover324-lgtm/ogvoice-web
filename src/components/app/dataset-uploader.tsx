@@ -74,6 +74,7 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
   buttonLabel?: string;
   ui?: "card" | "minimal";
   suppressSuccessToast?: boolean;
+  validateFile?: (file: File) => Promise<string | null> | string | null;
 }>(function DatasetUploaderImpl(
   {
     voiceProfileId,
@@ -91,6 +92,7 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
     buttonLabel,
     ui,
     suppressSuccessToast,
+    validateFile,
   },
   ref
 ) {
@@ -101,8 +103,8 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
   const currentItemIdRef = React.useRef<string | null>(null);
 
   async function processFiles(fileList: FileList | File[]) {
-    const files = Array.isArray(fileList) ? fileList : Array.from(fileList);
-    if (!files || files.length === 0) return;
+    const incoming = Array.isArray(fileList) ? fileList : Array.from(fileList);
+    if (!incoming || incoming.length === 0) return;
     if (disabled) {
       toast.error(disabledReason || "Uploads are disabled here.");
       return;
@@ -114,18 +116,29 @@ export const DatasetUploader = React.forwardRef<DatasetUploaderHandle, {
       return;
     }
 
-    if (type === "dataset_audio" && files.length > 1) {
+    if (type === "dataset_audio" && incoming.length > 1) {
       toast.error("Dataset upload supports only 1 file.");
       return;
     }
 
     if (type === "dataset_audio") {
-      const file = files[0];
+      const file = incoming[0];
       if (!file || !isValidDatasetWavFile(file)) {
         toast.error("Dataset must be a .wav file.");
         return;
       }
     }
+
+    const files: File[] = [];
+    for (const file of incoming) {
+      const reason = validateFile ? await validateFile(file) : null;
+      if (reason) {
+        toast.error(reason);
+        continue;
+      }
+      files.push(file);
+    }
+    if (files.length === 0) return;
 
     if (files[0]) {
       onFilePicked?.(files[0].name);

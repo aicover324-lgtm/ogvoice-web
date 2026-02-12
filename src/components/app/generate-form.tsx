@@ -48,6 +48,7 @@ const AUDIO_ALLOWED_MIME = new Set([
   "audio/flac",
   "audio/x-flac",
 ]);
+const MAX_SINGING_RECORD_SECONDS = 6 * 60;
 
 const WAVE_BARS = [
   { id: "b1", height: 26, opacity: 0.45 },
@@ -345,15 +346,24 @@ export function GenerateForm({
         if (chunks.length === 0) return;
 
         const blob = new Blob(chunks, { type: finalType });
-        const file = new File([blob], `live-recording-${Date.now()}.${recordingExtForMime(finalType)}`, { type: finalType });
-        void uploaderRef.current?.uploadFiles([file]);
+        void (async () => {
+          const file = await buildRecordingUploadFile(blob, finalType);
+          await uploaderRef.current?.uploadFiles([file]);
+        })();
       };
 
       recorder.start(300);
       setRecording(true);
       setRecordingElapsedSec(0);
       recordingTimerRef.current = window.setInterval(() => {
-        setRecordingElapsedSec((prev) => prev + 1);
+        setRecordingElapsedSec((prev) => {
+          const next = prev + 1;
+          if (next >= MAX_SINGING_RECORD_SECONDS) {
+            stopLiveRecording();
+            toast.message("Maximum recording length is 6 minutes. Recording stopped.");
+          }
+          return next;
+        });
       }, 1000);
       toast.success("Recording started.");
     } catch (e) {
@@ -607,6 +617,16 @@ export function GenerateForm({
           hideButton
           hideList
           suppressSuccessToast
+          validateFile={async (file) => {
+            const duration = await readAudioDurationSeconds(file).catch(() => null);
+            if (!duration || !Number.isFinite(duration)) {
+              return "Could not read audio length. Please choose another file.";
+            }
+            if (duration > MAX_SINGING_RECORD_SECONDS) {
+              return "Maximum singing record length is 6 minutes.";
+            }
+            return null;
+          }}
           onFileSelected={(file) => {
             setInputAssetId(null);
             setInputFileName(file.name);
@@ -1015,6 +1035,89 @@ function recordingExtForMime(mime: string) {
   return "webm";
 }
 
+async function buildRecordingUploadFile(blob: Blob, mimeType: string) {
+  try {
+    const wav = await convertRecordedBlobToWav(blob);
+    return new File([wav], `live-recording-${Date.now()}.wav`, { type: "audio/wav" });
+  } catch {
+    return new File([blob], `live-recording-${Date.now()}.${recordingExtForMime(mimeType)}`, { type: mimeType });
+  }
+}
+
+async function convertRecordedBlobToWav(blob: Blob) {
+  const AudioCtx =
+    typeof window !== "undefined"
+      ? (window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)
+      : undefined;
+  if (!AudioCtx) {
+    throw new Error("AudioContext unavailable");
+  }
+
+  const ctx = new AudioCtx();
+  try {
+    const input = await blob.arrayBuffer();
+    const decoded = await ctx.decodeAudioData(input.slice(0));
+    return encodeAudioBufferToMonoWav(decoded);
+  } finally {
+    await ctx.close().catch(() => null);
+  }
+}
+
+function encodeAudioBufferToMonoWav(buffer: AudioBuffer) {
+  const sampleRate = buffer.sampleRate;
+  const length = buffer.length;
+  const mono = new Float32Array(length);
+
+  for (let ch = 0; ch < buffer.numberOfChannels; ch += 1) {
+    const data = buffer.getChannelData(ch);
+    for (let i = 0; i < length; i += 1) {
+      mono[i] += data[i] || 0;
+    }
+  }
+
+  const divider = Math.max(1, buffer.numberOfChannels);
+  for (let i = 0; i < length; i += 1) {
+    mono[i] /= divider;
+  }
+
+  const bytesPerSample = 2;
+  const blockAlign = bytesPerSample;
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = length * bytesPerSample;
+  const out = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(out);
+
+  writeAscii(view, 0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeAscii(view, 8, "WAVE");
+  writeAscii(view, 12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, 16, true);
+  writeAscii(view, 36, "data");
+  view.setUint32(40, dataSize, true);
+
+  let offset = 44;
+  for (let i = 0; i < length; i += 1) {
+    const sample = Math.max(-1, Math.min(1, mono[i] || 0));
+    const int16 = sample < 0 ? Math.round(sample * 0x8000) : Math.round(sample * 0x7fff);
+    view.setInt16(offset, int16, true);
+    offset += 2;
+  }
+
+  return new Uint8Array(out);
+}
+
+function writeAscii(view: DataView, offset: number, value: string) {
+  for (let i = 0; i < value.length; i += 1) {
+    view.setUint8(offset + i, value.charCodeAt(i));
+  }
+}
+
 function formatClock(sec: number) {
   const safe = Math.max(0, Math.floor(sec));
   const m = Math.floor(safe / 60);
@@ -1071,4 +1174,35 @@ function formatFileSize(size: number | null) {
     unit += 1;
   }
   return `${value.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+}
+
+async function readAudioDurationSeconds(file: File) {
+  const url = URL.createObjectURL(file);
+  try {
+    const el = document.createElement("audio");
+    el.preload = "metadata";
+    el.src = url;
+
+    const duration = await new Promise<number>((resolve, reject) => {
+      const onLoaded = () => {
+        const d = el.duration;
+        cleanup();
+        if (Number.isFinite(d) && d > 0) resolve(d);
+        else reject(new Error("Invalid audio duration"));
+      };
+      const onError = () => {
+        cleanup();
+        reject(new Error("Audio metadata read failed"));
+      };
+      const cleanup = () => {
+        el.removeEventListener("loadedmetadata", onLoaded);
+        el.removeEventListener("error", onError);
+      };
+      el.addEventListener("loadedmetadata", onLoaded);
+      el.addEventListener("error", onError);
+    });
+    return duration;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }

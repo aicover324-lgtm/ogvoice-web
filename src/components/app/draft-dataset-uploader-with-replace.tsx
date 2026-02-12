@@ -17,6 +17,8 @@ type DraftAsset = {
 };
 
 const DATASET_ALLOWED_MIME = new Set(["audio/wav", "audio/x-wav"]);
+const MIN_DATASET_SECONDS = 10 * 60;
+const MAX_DATASET_SECONDS = 20 * 60;
 
 function isValidDatasetWavFile(file: File) {
   const lower = file.name.toLowerCase();
@@ -38,6 +40,20 @@ function draggedWavState(dt: DataTransfer): "valid" | "invalid" | "unknown" {
     sawValid = true;
   }
   return sawValid ? "valid" : "unknown";
+}
+
+async function validateDatasetDuration(file: File) {
+  const duration = await readAudioDurationSeconds(file).catch(() => null);
+  if (!duration || !Number.isFinite(duration)) {
+    return "Could not read recording length. Please choose a valid wav file.";
+  }
+  if (duration < MIN_DATASET_SECONDS) {
+    return "Dataset must be at least 10 minutes.";
+  }
+  if (duration > MAX_DATASET_SECONDS) {
+    return "Dataset must be at most 20 minutes.";
+  }
+  return null;
 }
 
 export function DraftDatasetUploaderWithReplace({
@@ -96,6 +112,11 @@ export function DraftDatasetUploaderWithReplace({
 
     void (async () => {
       try {
+        const durationError = await validateDatasetDuration(file);
+        if (durationError) {
+          toast.error(durationError);
+          return;
+        }
         if (draft) {
           toast.message("Replacing current file...");
           await clearDraft();
@@ -203,7 +224,7 @@ export function DraftDatasetUploaderWithReplace({
             <div className="text-sm text-slate-300">
               Drag and drop your singing recording here, or click to choose.
             </div>
-            <div className="text-xs text-slate-400">Allowed: WAV only (one file)</div>
+            <div className="text-xs text-slate-400">Allowed: WAV only, 10-20 minutes</div>
             <div className="mt-3 inline-flex w-fit items-center rounded-full border border-white/20 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-200">
               <Repeat2 className="mr-2 h-3.5 w-3.5" />
               {locked ? "Choose new file" : "Choose file"}
@@ -224,6 +245,11 @@ export function DraftDatasetUploaderWithReplace({
               try {
                 if (!isValidDatasetWavFile(f)) {
                   toast.error("Singing record must be a .wav file.");
+                  return;
+                }
+                const durationError = await validateDatasetDuration(f);
+                if (durationError) {
+                  toast.error(durationError);
                   return;
                 }
                 if (draft) {
@@ -251,6 +277,7 @@ export function DraftDatasetUploaderWithReplace({
           disabledReason={
             loading ? "Loading..." : undefined
           }
+          validateFile={validateDatasetDuration}
           onAssetCreated={async () => {
             await loadDraft();
             toast.success("Singing record uploaded.");
@@ -262,4 +289,35 @@ export function DraftDatasetUploaderWithReplace({
       </div>
     </PremiumCard>
   );
+}
+
+async function readAudioDurationSeconds(file: File) {
+  const url = URL.createObjectURL(file);
+  try {
+    const el = document.createElement("audio");
+    el.preload = "metadata";
+    el.src = url;
+
+    const duration = await new Promise<number>((resolve, reject) => {
+      const onLoaded = () => {
+        const d = el.duration;
+        cleanup();
+        if (Number.isFinite(d) && d > 0) resolve(d);
+        else reject(new Error("Invalid audio duration"));
+      };
+      const onError = () => {
+        cleanup();
+        reject(new Error("Audio metadata read failed"));
+      };
+      const cleanup = () => {
+        el.removeEventListener("loadedmetadata", onLoaded);
+        el.removeEventListener("error", onError);
+      };
+      el.addEventListener("loadedmetadata", onLoaded);
+      el.addEventListener("error", onError);
+    });
+    return duration;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
