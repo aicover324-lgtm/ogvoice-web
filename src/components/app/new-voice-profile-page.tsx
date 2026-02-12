@@ -140,6 +140,41 @@ export function NewVoiceProfilePage() {
         </div>
       </section>
 
+      <section className="mt-4 rounded-2xl border border-white/10 bg-[#101b37] p-4 md:p-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-200">Before You Upload</h2>
+          <Badge variant="outline" className="border-cyan-300/40 bg-cyan-400/10 text-cyan-200">
+            Quality tips
+          </Badge>
+        </div>
+
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+            <div className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-cyan-300/40 bg-cyan-400/10 px-1.5 text-xs font-semibold text-cyan-200">
+              1
+            </div>
+            <div className="mt-2 text-sm font-semibold text-slate-100">Use clean vocal only</div>
+            <p className="mt-1 text-xs text-slate-400">Do not upload songs with background music or beat. Upload only voice.</p>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+            <div className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-cyan-300/40 bg-cyan-400/10 px-1.5 text-xs font-semibold text-cyan-200">
+              2
+            </div>
+            <div className="mt-2 text-sm font-semibold text-slate-100">Keep noise low</div>
+            <p className="mt-1 text-xs text-slate-400">Avoid room echo, fan noise, crowd noise, and clipped audio peaks.</p>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+            <div className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-cyan-300/40 bg-cyan-400/10 px-1.5 text-xs font-semibold text-cyan-200">
+              3
+            </div>
+            <div className="mt-2 text-sm font-semibold text-slate-100">One singer, steady voice</div>
+            <p className="mt-1 text-xs text-slate-400">Use one voice style in one file for a more stable and natural result.</p>
+          </div>
+        </div>
+      </section>
+
       <form ref={formRef} onSubmit={createVoice} className="mt-6">
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
           <div className="space-y-4">
