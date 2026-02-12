@@ -297,6 +297,7 @@ export function GenerateForm({
     }).length;
   }, [queue]);
   const dailyLimit = 50;
+  const canCreateCover = !!inputAssetId && !uploadBusy && !loading;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
@@ -599,9 +600,14 @@ export function GenerateForm({
 
             <div className="mt-6 flex items-center justify-end gap-3 border-t border-white/10 pt-5">
               <Button
-                className="og-btn-gradient rounded-xl px-8 cursor-pointer disabled:pointer-events-auto disabled:cursor-not-allowed"
+                className={cn(
+                  "rounded-xl px-8",
+                  canCreateCover
+                    ? "og-btn-gradient cursor-pointer"
+                    : "border border-white/15 bg-white/10 text-slate-400 cursor-not-allowed"
+                )}
                 onClick={() => void start()}
-                disabled={loading || !inputAssetId || uploadBusy}
+                disabled={!canCreateCover}
               >
                 {loading ? "Starting..." : "Create Cover"}
               </Button>
