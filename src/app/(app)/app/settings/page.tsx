@@ -54,9 +54,6 @@ export default async function SettingsPage() {
               <ImageUploader
                 type="avatar_image"
                 preview={{ src: avatarSrc, alt: "Avatar", variant: "avatar", size: 56 }}
-                onComplete={() => {
-                  /* user-menu uses /api/users/avatar */
-                }}
               />
             </div>
           </div>
