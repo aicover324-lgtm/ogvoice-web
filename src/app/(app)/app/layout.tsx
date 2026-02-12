@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex">
         <AppSidebar />
         <div className="flex min-h-dvh flex-1 flex-col">
-          <header className="sticky top-0 z-30 bg-[#070d24]/95">
+          <header className="z-30 bg-[#070d24]/95">
             <div className="flex h-16 items-center justify-between px-4">
               <div className="flex items-center gap-2 md:hidden">
                 <MobileNav />
