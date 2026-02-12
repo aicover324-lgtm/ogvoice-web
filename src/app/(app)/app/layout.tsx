@@ -5,6 +5,7 @@ import { AppSidebar } from "@/components/app/app-sidebar";
 import { MobileNav } from "@/components/app/mobile-nav";
 import { UserMenu } from "@/components/app/user-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { FixedBorderGuard } from "@/components/app/fixed-border-guard";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -30,6 +31,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               </div>
             </div>
           </header>
+          <FixedBorderGuard />
           <div className="flex-1">{children}</div>
         </div>
       </div>
