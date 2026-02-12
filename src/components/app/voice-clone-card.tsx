@@ -93,7 +93,7 @@ export function VoiceCloneCard({ voice, showUseAction }: { voice: VoiceCloneCard
       <div className="mt-4">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={voice.hasDataset ? "secondary" : "outline"} className={voice.hasDataset ? "bg-white/10 text-slate-100" : "border-white/20 text-slate-300"}>
-            {voice.hasDataset ? "singing record ready" : "missing singing record"}
+            {voice.hasDataset ? "singing record added" : "missing singing record"}
           </Badge>
           <span className={statusPillClass(cloneState)}>{statusPillLabel(cloneState)}</span>
           {failedHint ? <Badge variant="destructive">{failedHint}</Badge> : null}
@@ -106,7 +106,7 @@ export function VoiceCloneCard({ voice, showUseAction }: { voice: VoiceCloneCard
         <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
           <div className="mb-2 flex items-center justify-between gap-2 text-xs">
             <span className="font-semibold uppercase tracking-[0.08em] text-slate-400">Cloning status</span>
-            <span className="font-semibold text-cyan-200">{statusPillLabel(cloneState)}</span>
+            <span className="font-semibold text-cyan-200">{statusPanelLabel(cloneState)}</span>
           </div>
           <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
             <div className={statusProgressClass(cloneState)} style={{ width: `${statusProgressWidth(cloneState)}%` }} />
@@ -159,6 +159,13 @@ function statusPillLabel(state: CardCloneVisualState) {
   if (state === "cloning") return "Cloning now";
   if (state === "cloned") return "Ready";
   if (state === "failed") return "Needs retry";
+  return "Not started";
+}
+
+function statusPanelLabel(state: CardCloneVisualState) {
+  if (state === "cloning") return "In progress";
+  if (state === "cloned") return "Completed";
+  if (state === "failed") return "Stopped";
   return "Not started";
 }
 

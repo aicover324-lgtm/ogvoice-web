@@ -167,7 +167,7 @@ export function CloneVoicePanel({
       : status === "running"
         ? "Cloning now"
         : status === "succeeded"
-          ? "Ready"
+          ? "Completed"
           : status === "failed"
             ? "Stopped"
             : "Not started";
@@ -178,7 +178,7 @@ export function CloneVoicePanel({
       : status === "running"
         ? "Cloning in progress. We update this panel automatically."
         : status === "succeeded"
-          ? "Your voice is ready to use in Generate."
+          ? "Your voice can now be used in Generate."
           : status === "failed"
             ? "Cloning stopped. You can retry now."
             : "Press Start Cloning when your singing record is ready.";
@@ -333,7 +333,7 @@ function StatusPill({ status }: { status: CloneTrainingStatus | null }) {
     return (
       <span className={cn(base, "border-fuchsia-400/45 bg-fuchsia-500/15 text-fuchsia-200")}>
         <Sparkles className="h-3 w-3" />
-        Ready
+        Done
       </span>
     );
   }

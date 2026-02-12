@@ -49,6 +49,7 @@ const AUDIO_ALLOWED_MIME = new Set([
   "audio/flac",
   "audio/x-flac",
 ]);
+const MIN_SINGING_RECORD_SECONDS = 10;
 const MAX_SINGING_RECORD_SECONDS = 6 * 60;
 
 const WAVE_BARS = [
@@ -513,6 +514,9 @@ export function GenerateForm({
           <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
             Drag and drop your singing record here. Allowed formats: WAV, MP3, FLAC.
           </p>
+          <p className="mx-auto mt-1 max-w-xl text-xs text-slate-400">
+            Conversion record length: minimum 10 seconds, maximum 6 minutes.
+          </p>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <button
@@ -620,6 +624,9 @@ export function GenerateForm({
             const duration = await readAudioDurationSeconds(file).catch(() => null);
             if (!duration || !Number.isFinite(duration)) {
               return "Could not read audio length. Please choose another file.";
+            }
+            if (duration < MIN_SINGING_RECORD_SECONDS) {
+              return "Singing record must be at least 10 seconds.";
             }
             if (duration > MAX_SINGING_RECORD_SECONDS) {
               return "Maximum singing record length is 6 minutes.";
