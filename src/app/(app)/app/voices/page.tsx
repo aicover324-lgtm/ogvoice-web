@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { CloneVoiceSections } from "@/components/app/clone-voice-sections";
@@ -49,7 +50,11 @@ export default async function VoicesPage() {
 
       <section className="mt-4 rounded-2xl border border-white/10 bg-[#0f1831] p-4 md:p-5">
         <p className="text-sm text-slate-200">
-          Create and manage your cloned voices here. Upload a singing record, start cloning, and use ready voices in Generate.
+          Create and manage your cloned voices here. Upload a singing record, start cloning, and use ready voices in{" "}
+          <Link href="/app/generate" className="font-semibold text-cyan-300 hover:text-cyan-200 hover:underline">
+            Generate
+          </Link>
+          .
         </p>
       </section>
 
