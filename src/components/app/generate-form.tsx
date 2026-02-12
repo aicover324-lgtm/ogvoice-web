@@ -804,7 +804,7 @@ export function GenerateForm({
         </div>
       </section>
 
-      <aside className="min-w-0 self-start overflow-hidden rounded-2xl border border-white/10 bg-[#11172b]">
+      <aside className="min-w-0 self-start overflow-hidden rounded-2xl border-2 border-emerald-400 bg-[#11172b]">
         <div className="border-b border-white/10 p-5">
           <h3 className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
             Latest Result
