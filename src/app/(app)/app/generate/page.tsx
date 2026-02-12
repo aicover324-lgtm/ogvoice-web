@@ -60,7 +60,7 @@ export default async function GeneratePage({
   const initialVoiceId = requestedVoiceId && voices.some((v) => v.id === requestedVoiceId) ? requestedVoiceId : null;
 
   return (
-    <main className="px-4 pb-8 pt-6 md:px-6 xl:px-8">
+    <main className="overflow-x-hidden px-4 pb-8 pt-6 md:px-6 xl:px-8">
         {voices.length === 0 ? (
           <div className="rounded-xl border p-6 text-sm text-muted-foreground">
             Clone a voice first, then come back here to convert your singing record.

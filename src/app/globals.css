@@ -123,6 +123,10 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
+    overflow-x: hidden;
+  }
+  html {
+    overflow-x: hidden;
   }
   iframe {
     border: 0 !important;
