@@ -41,6 +41,15 @@ type UploadPanelState = {
   error: string | null;
 };
 
+type DebugBorderRow = {
+  id: string;
+  color: string;
+  tag: string;
+  width: number;
+  height: number;
+  className: string;
+};
+
 const AUDIO_ALLOWED_MIME = new Set([
   "audio/wav",
   "audio/x-wav",
@@ -130,6 +139,8 @@ export function GenerateForm({
   const recordingTimerRef = React.useRef<number | null>(null);
   const queueItemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const lastOutputAssetIdRef = React.useRef<string | null>(null);
+  const debugRootRef = React.useRef<HTMLDivElement | null>(null);
+  const [debugBorders, setDebugBorders] = React.useState<DebugBorderRow[]>([]);
 
   const selectedVoice = React.useMemo(() => voices.find((v) => v.id === voiceProfileId) || null, [voiceProfileId, voices]);
   const uploadBusy =
@@ -401,8 +412,52 @@ export function GenerateForm({
   const dailyLimit = 50;
   const canCreateCover = !!inputAssetId && !uploadBusy && !recordingBusy && !loading;
 
+  React.useEffect(() => {
+    const root = debugRootRef.current;
+    if (!root) return;
+
+    const all = Array.from(root.querySelectorAll<HTMLElement>("*"));
+    const rows: DebugBorderRow[] = [];
+    const skipTags = new Set(["BUTTON", "A", "SPAN", "SVG", "PATH", "INPUT", "AUDIO"]);
+
+    for (const el of all) {
+      if (skipTags.has(el.tagName)) continue;
+      const style = window.getComputedStyle(el);
+      const hasBorderClass = (el.className || "").toString().includes("border");
+      const borderWidth =
+        Number.parseFloat(style.borderTopWidth || "0") +
+        Number.parseFloat(style.borderRightWidth || "0") +
+        Number.parseFloat(style.borderBottomWidth || "0") +
+        Number.parseFloat(style.borderLeftWidth || "0");
+      if (!hasBorderClass && borderWidth <= 0) continue;
+
+      const rect = el.getBoundingClientRect();
+      if (rect.width < 220 || rect.height < 56) continue;
+
+      const id = `dbg-${rows.length + 1}`;
+      const hue = Math.floor(Math.random() * 360);
+      const color = `hsl(${hue} 100% 50%)`;
+
+      el.dataset.debugBorderId = id;
+      el.style.setProperty("border-width", "4px", "important");
+      el.style.setProperty("border-style", "solid", "important");
+      el.style.setProperty("border-color", color, "important");
+
+      rows.push({
+        id,
+        color,
+        tag: el.tagName,
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        className: (el.className || "").toString().slice(0, 140),
+      });
+    }
+
+    setDebugBorders(rows);
+  }, [queue.length, voices.length]);
+
   return (
-    <div className="space-y-6">
+    <div ref={debugRootRef} className="space-y-6">
       <div className="grid items-start gap-6 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
       <aside className="min-w-0 self-start rounded-2xl border border-white/10 bg-[#11172b]">
         <div className="border-b border-white/10 p-4">
@@ -993,6 +1048,39 @@ export function GenerateForm({
           </div>
         </div>
       </aside>
+      </div>
+
+      <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#11172b] p-4">
+        <div className="mb-3 text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
+          Generate Border Debug Table
+        </div>
+        <table className="w-full min-w-[760px] text-left text-xs">
+          <thead className="text-muted-foreground">
+            <tr>
+              <th className="px-2 py-1">ID</th>
+              <th className="px-2 py-1">Color</th>
+              <th className="px-2 py-1">Tag</th>
+              <th className="px-2 py-1">Size</th>
+              <th className="px-2 py-1">Class</th>
+            </tr>
+          </thead>
+          <tbody>
+            {debugBorders.map((row) => (
+              <tr key={row.id} className="border-t border-white/10 align-top">
+                <td className="px-2 py-1 font-mono">{row.id}</td>
+                <td className="px-2 py-1">
+                  <span className="inline-flex items-center gap-2">
+                    <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: row.color }} />
+                    <span className="font-mono">{row.color}</span>
+                  </span>
+                </td>
+                <td className="px-2 py-1 font-mono">{row.tag}</td>
+                <td className="px-2 py-1 font-mono">{row.width}x{row.height}</td>
+                <td className="px-2 py-1 font-mono text-muted-foreground">{row.className}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
