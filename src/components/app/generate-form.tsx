@@ -804,8 +804,8 @@ export function GenerateForm({
         </div>
       </section>
 
-      <aside className="min-w-0 self-start space-y-4">
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#11172b] p-5">
+      <aside className="min-w-0 self-start overflow-hidden rounded-2xl border border-white/10 bg-[#11172b]">
+        <div className="border-b border-white/10 p-5">
           <h3 className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
             Latest Result
           </h3>
@@ -891,7 +891,7 @@ export function GenerateForm({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-[#11172b] p-5">
+        <div className="p-5">
           <div className="mb-3 flex items-center justify-between">
               <h3 className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
                 Recent Jobs
@@ -978,7 +978,7 @@ export function GenerateForm({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-[#11172b] p-5">
+        <div className="p-5">
           <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
             <span>Daily Generation Limit</span>
             <span className="font-semibold text-cyan-300">
