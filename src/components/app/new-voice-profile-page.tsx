@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CheckCircle2, Circle, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -82,139 +84,189 @@ export function NewVoiceProfilePage() {
   const canSubmit = ready && !creating;
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
-            New Voice Profile
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">Upload your singing voice recording.</p>
-        </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          className="rounded-full cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-auto"
-          disabled={cleaning}
-          onClick={() => {
-            void (async () => {
-              setCleaning(true);
-              try {
-                const [a, b] = await Promise.all([
-                  fetch("/api/uploads/draft", { method: "DELETE" }),
-                  fetch("/api/uploads/draft-cover", { method: "DELETE" }),
-                ]);
-                const aj = await a.json().catch(() => null);
-                const bj = await b.json().catch(() => null);
-                if (!a.ok || !aj?.ok) throw new Error(aj?.error?.message || "Could not clean voice file");
-                if (!b.ok || !bj?.ok) throw new Error(bj?.error?.message || "Could not clean cover image");
-                setDatasetAssetId(null);
-                setCoverAssetId(null);
-                setResetKey((k) => k + 1);
-                formRef.current?.reset();
-                setNameValue("");
-                toast.success("Cleaned. Start fresh.");
-              } catch (e) {
-                toast.error(e instanceof Error ? e.message : "Clean failed");
-              } finally {
-                setCleaning(false);
-              }
-            })();
-          }}
-        >
-          {cleaning ? "Cleaning..." : "Clean"}
-        </Button>
-      </div>
-
-      <form ref={formRef} onSubmit={createVoice} className="mt-8">
-        <div className="grid gap-4 lg:grid-cols-3">
-          <DraftDatasetUploaderWithReplace
-            key={`voice-${resetKey}`}
-            title="1. Singing Voice"
-            onDraftChange={(asset) => {
-              setDatasetAssetId(asset?.id ?? null);
-            }}
-          />
-
-          <PremiumCard className="p-6">
-            <div>
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
-                  2. Cover Image
-                </div>
-                <Badge variant={coverAssetId ? "secondary" : "outline"}>{coverAssetId ? "uploaded" : "optional"}</Badge>
-              </div>
-              <div className="mt-4 grid gap-3">
-                <ImageUploader
-                  key={`cover-${resetKey}`}
-                  type="voice_cover_image"
-                  trigger="frame"
-                  frameHint={null}
-                  footerHint={null}
-                  preview={{
-                    src: "/api/uploads/draft-cover/image",
-                    alt: "Cover",
-                    variant: "cover",
-                    width: "100%",
-                    height: 288,
-                  }}
-                  onAssetCreated={(asset) => setCoverAssetId(asset.id)}
-                />
-                <div className="text-xs text-muted-foreground">Upload a cover image</div>
-              </div>
+    <main className="og-app-main">
+      <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0d152d] p-5 md:p-7">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(6,182,212,0.14),transparent_50%),radial-gradient(circle_at_82%_0%,rgba(217,70,239,0.12),transparent_44%)]" />
+        <div className="relative z-10">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="max-w-2xl">
+              <h1 className="text-2xl font-semibold tracking-tight text-white md:text-3xl" style={{ fontFamily: "var(--font-heading)" }}>
+                Create Voice
+              </h1>
+              <p className="mt-2 text-sm text-slate-300">
+                Upload your singing record, add an optional cover image, and choose a clear name. Then create your voice in one step.
+              </p>
             </div>
-          </PremiumCard>
 
-          <PremiumCard className="p-6">
-            <div>
-              <div className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
-                3. Voice Details
-              </div>
-              <div className="mt-4 grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    placeholder="e.g., Studio Vocal - English"
-                    required
-                    onInput={(e) => setNameValue((e.target as HTMLInputElement).value)}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button asChild variant="outline" className="rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10">
+                <Link href="/app/voices">Back to Clone Voice</Link>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-auto"
+                disabled={cleaning}
+                onClick={() => {
+                  void (async () => {
+                    setCleaning(true);
+                    try {
+                      const [a, b] = await Promise.all([
+                        fetch("/api/uploads/draft", { method: "DELETE" }),
+                        fetch("/api/uploads/draft-cover", { method: "DELETE" }),
+                      ]);
+                      const aj = await a.json().catch(() => null);
+                      const bj = await b.json().catch(() => null);
+                      if (!a.ok || !aj?.ok) throw new Error(aj?.error?.message || "Could not clean voice file");
+                      if (!b.ok || !bj?.ok) throw new Error(bj?.error?.message || "Could not clean cover image");
+                      setDatasetAssetId(null);
+                      setCoverAssetId(null);
+                      setResetKey((k) => k + 1);
+                      formRef.current?.reset();
+                      setNameValue("");
+                      toast.success("Cleaned. Start fresh.");
+                    } catch (e) {
+                      toast.error(e instanceof Error ? e.message : "Clean failed");
+                    } finally {
+                      setCleaning(false);
+                    }
+                  })();
+                }}
+              >
+                {cleaning ? "Cleaning..." : "Start over"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <form ref={formRef} onSubmit={createVoice} className="mt-6">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+          <div className="space-y-4">
+            <DraftDatasetUploaderWithReplace
+              key={`voice-${resetKey}`}
+              title="1. Singing Record"
+              onDraftChange={(asset) => {
+                setDatasetAssetId(asset?.id ?? null);
+              }}
+            />
+
+            <PremiumCard className="border-white/10 bg-[#101b37] p-5 text-slate-100" ringClassName="ring-white/10">
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
+                    2. Cover Image
+                  </div>
+                  <Badge
+                    variant={coverAssetId ? "secondary" : "outline"}
+                    className={coverAssetId ? "bg-white/10 text-slate-100" : "border-white/20 text-slate-300"}
+                  >
+                    {coverAssetId ? "Uploaded" : "Optional"}
+                  </Badge>
+                </div>
+                <div className="mt-3 grid gap-3">
+                  <ImageUploader
+                    key={`cover-${resetKey}`}
+                    type="voice_cover_image"
+                    trigger="frame"
+                    frameHint="Drag and drop an image, or click to upload."
+                    footerHint={null}
+                    preview={{
+                      src: "/api/uploads/draft-cover/image",
+                      alt: "Cover",
+                      variant: "cover",
+                      width: "100%",
+                      height: 260,
+                    }}
+                    onAssetCreated={(asset) => setCoverAssetId(asset.id)}
                   />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="language">Language (optional)</Label>
-                  <Input id="language" name="language" placeholder="e.g., en" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="description">Notes (optional)</Label>
-                  <Textarea id="description" name="description" placeholder="Mic, room, style, tips..." />
+                  <div className="text-xs text-slate-400">Accepted: JPG, PNG, WEBP</div>
                 </div>
               </div>
-            </div>
-          </PremiumCard>
-        </div>
+            </PremiumCard>
+          </div>
 
-        <div className="mt-8 flex justify-center">
-          <div className="relative">
-            {canSubmit ? (
-              <div className="pointer-events-none absolute -inset-3 rounded-full bg-gradient-to-r from-cyan-500/25 to-fuchsia-500/22 blur-xl dark:from-cyan-500/30 dark:to-fuchsia-500/28" />
-            ) : null}
-            <Button
-              type="submit"
-              disabled={!canSubmit}
-              className={
-                (
-                  canSubmit
-                    ? "og-btn-gradient relative h-11 rounded-full px-7 text-sm font-semibold shadow-lg shadow-black/10 dark:shadow-black/30 cursor-pointer"
-                    : "relative h-11 rounded-full px-7 text-sm font-semibold border border-black/10 bg-muted text-muted-foreground shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-white/60"
-                ) + " disabled:pointer-events-auto disabled:cursor-not-allowed"
-              }
-            >
-              {creating ? "Creating..." : "Create Voice"}
-            </Button>
+          <div className="space-y-4">
+            <PremiumCard className="border-white/10 bg-[#101b37] p-5 text-slate-100" ringClassName="ring-white/10">
+              <div>
+                <div className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
+                  3. Voice Details
+                </div>
+                <div className="mt-4 grid gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name" className="text-slate-200">Voice name</Label>
+                    <Input
+                      id="name"
+                      name="name"
+                      placeholder="e.g., Studio Vocal - English"
+                      required
+                      className="border-white/15 bg-white/5 text-slate-100 placeholder:text-slate-400"
+                      onInput={(e) => setNameValue((e.target as HTMLInputElement).value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="language" className="text-slate-200">Language (optional)</Label>
+                    <Input
+                      id="language"
+                      name="language"
+                      placeholder="e.g., en"
+                      className="border-white/15 bg-white/5 text-slate-100 placeholder:text-slate-400"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="description" className="text-slate-200">Notes (optional)</Label>
+                    <Textarea
+                      id="description"
+                      name="description"
+                      placeholder="Mic, room, style, tips..."
+                      className="min-h-28 border-white/15 bg-white/5 text-slate-100 placeholder:text-slate-400"
+                    />
+                  </div>
+                </div>
+              </div>
+            </PremiumCard>
+
+            <PremiumCard className="border-white/10 bg-[#101b37] p-5 text-slate-100" ringClassName="ring-white/10">
+              <div className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
+                Ready Check
+              </div>
+              <div className="mt-3 space-y-2">
+                <ReadyRow ok={!!datasetAssetId} label="Singing record" help={datasetAssetId ? "Uploaded" : "Upload a .wav record"} />
+                <ReadyRow ok={nameValue.trim().length >= 2} label="Voice name" help={nameValue.trim().length >= 2 ? "Looks good" : "At least 2 characters"} />
+                <ReadyRow ok={ready} label="Create voice" help={ready ? "You can create now" : "Complete the required steps"} />
+              </div>
+
+              <div className="mt-4">
+                <Button
+                  type="submit"
+                  disabled={!canSubmit}
+                  className={
+                    (canSubmit
+                      ? "og-btn-gradient h-11 w-full rounded-full text-sm font-semibold cursor-pointer"
+                      : "h-11 w-full rounded-full border border-white/20 bg-white/5 text-slate-400") +
+                    " disabled:pointer-events-auto disabled:cursor-not-allowed"
+                  }
+                >
+                  {creating ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
+                  {creating ? "Creating..." : "Create Voice"}
+                </Button>
+              </div>
+            </PremiumCard>
           </div>
         </div>
       </form>
     </main>
+  );
+}
+
+function ReadyRow({ ok, label, help }: { ok: boolean; label: string; help: string }) {
+  return (
+    <div className="flex items-start gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-2.5">
+      <span className="mt-0.5 text-slate-300">{ok ? <CheckCircle2 className="h-4 w-4 text-emerald-300" /> : <Circle className="h-4 w-4" />}</span>
+      <div className="min-w-0">
+        <div className="text-xs font-semibold text-slate-100">{label}</div>
+        <div className="text-[11px] text-slate-400">{help}</div>
+      </div>
+    </div>
   );
 }

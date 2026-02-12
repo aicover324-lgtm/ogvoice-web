@@ -88,7 +88,7 @@ export function DraftDatasetUploaderWithReplace({
     const file = files.item(0);
     if (!file) return;
     if (!isValidDatasetWavFile(file)) {
-      toast.error("Dataset must be a .wav file.");
+      toast.error("Singing record must be a .wav file.");
       return;
     }
 
@@ -106,21 +106,26 @@ export function DraftDatasetUploaderWithReplace({
   }
 
   const locked = !!draft;
-  const heading = title || "1. Singing Voice";
+  const heading = title || "1. Singing Record";
 
   return (
-    <PremiumCard className={cn("p-6", className)}>
+    <PremiumCard className={cn("border-white/10 bg-[#101b37] p-5 text-slate-100", className)} ringClassName="ring-white/10">
       <div className="flex items-center justify-between">
         <div className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>{heading}</div>
-        <Badge variant={locked ? "secondary" : "outline"}>{locked ? "uploaded" : "required"}</Badge>
+        <Badge
+          variant={locked ? "secondary" : "outline"}
+          className={locked ? "bg-white/10 text-slate-100" : "border-white/20 text-slate-300"}
+        >
+          {locked ? "Uploaded" : "Required"}
+        </Badge>
       </div>
 
       <div className="mt-3">
         {locked ? (
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-3">
             <div className="min-w-0">
-              <div className="text-xs text-muted-foreground">Current voice file</div>
-              <div className="truncate text-sm font-medium">{draft.fileName}</div>
+              <div className="text-xs text-slate-400">Current singing record</div>
+              <div className="truncate text-sm font-medium text-slate-100">{draft.fileName}</div>
             </div>
           </div>
         ) : null}
@@ -130,13 +135,10 @@ export function DraftDatasetUploaderWithReplace({
           className={cn(
             "group relative w-full overflow-hidden rounded-2xl border p-6 text-left transition-all",
             "min-h-[288px]",
-            // Neutral glass frame (no colored background)
-            "border-black/10 bg-background/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-md",
-            "dark:border-white/12 dark:bg-background/10 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
-            "hover:border-black/12 hover:shadow-[0_18px_50px_rgba(2,8,23,0.10)]",
-            "dark:hover:border-white/16 dark:hover:shadow-[0_22px_70px_rgba(0,0,0,0.40)]",
+            "border-white/15 bg-white/[0.03] backdrop-blur-md",
+            "hover:border-cyan-300/35 hover:shadow-[0_18px_50px_rgba(2,8,23,0.28)]",
             dragState === "invalid" ? "cursor-not-allowed" : "cursor-pointer",
-            dragState === "valid" ? "ring-2 ring-primary/35" : dragState === "invalid" ? "ring-2 ring-destructive/35" : "ring-0"
+            dragState === "valid" ? "ring-2 ring-cyan-300/40" : dragState === "invalid" ? "ring-2 ring-destructive/35" : "ring-0"
           )}
           onClick={onChooseFile}
           onDragEnter={(e) => {
@@ -165,18 +167,18 @@ export function DraftDatasetUploaderWithReplace({
             onDropFiles(e.dataTransfer.files);
           }}
         >
-          <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/8 dark:ring-white/10" />
-          <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100 bg-gradient-to-b from-white/10 via-transparent to-transparent dark:from-white/6" />
+          <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-white/10" />
+          <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100 bg-gradient-to-b from-white/8 via-transparent to-transparent" />
 
           <div className="relative flex max-w-xl flex-col gap-2">
-            <div className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
-              {locked ? "Replace voice file" : "Upload voice file"}
+            <div className="text-sm font-semibold text-slate-100" style={{ fontFamily: "var(--font-heading)" }}>
+              {locked ? "Replace singing record" : "Upload singing record"}
             </div>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-slate-300">
               Drag and drop your singing recording here, or click to choose.
             </div>
-            <div className="text-xs text-muted-foreground">Allowed: wav · One file only</div>
-            <div className="mt-3 inline-flex w-fit items-center rounded-full border bg-background/40 px-3 py-1.5 text-xs text-muted-foreground">
+            <div className="text-xs text-slate-400">Allowed: WAV only (one file)</div>
+            <div className="mt-3 inline-flex w-fit items-center rounded-full border border-white/20 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-200">
               <Repeat2 className="mr-2 h-3.5 w-3.5" />
               {locked ? "Choose new file" : "Choose file"}
             </div>
@@ -195,7 +197,7 @@ export function DraftDatasetUploaderWithReplace({
             void (async () => {
               try {
                 if (!isValidDatasetWavFile(f)) {
-                  toast.error("Dataset must be a .wav file.");
+                  toast.error("Singing record must be a .wav file.");
                   return;
                 }
                 if (draft) {
@@ -225,7 +227,7 @@ export function DraftDatasetUploaderWithReplace({
           }
           onAssetCreated={async () => {
             await loadDraft();
-            toast.success("Voice file uploaded");
+            toast.success("Singing record uploaded.");
           }}
         />
       </div>
