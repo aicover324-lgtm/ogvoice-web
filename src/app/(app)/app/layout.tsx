@@ -11,7 +11,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!session?.user?.id) redirect("/login");
 
   return (
-    <div className="min-h-dvh">
+    <div className="og-app-shell min-h-dvh">
       <div className="flex">
         <AppSidebar />
         <div className="flex min-h-dvh flex-1 flex-col">
