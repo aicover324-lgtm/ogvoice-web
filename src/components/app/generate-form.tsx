@@ -129,7 +129,6 @@ export function GenerateForm({
   const mediaStreamRef = React.useRef<MediaStream | null>(null);
   const recordingChunksRef = React.useRef<BlobPart[]>([]);
   const recordingTimerRef = React.useRef<number | null>(null);
-  const queueItemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const lastOutputAssetIdRef = React.useRef<string | null>(null);
 
   const selectedVoice = React.useMemo(() => voices.find((v) => v.id === voiceProfileId) || null, [voiceProfileId, voices]);
@@ -296,19 +295,6 @@ export function GenerateForm({
     void fetchOutputUrl(latestOutputAssetId, latestSucceeded?.outputFileName || null);
   }, [fetchOutputUrl, latestOutputAssetId, latestResultJobId, latestSucceeded?.outputFileName]);
 
-  React.useEffect(() => {
-    if (!activeResultJobId) return;
-    const el = queueItemRefs.current[activeResultJobId];
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [activeResultJobId]);
-
-  async function openQueueResult(item: QueueItem) {
-    if (!item.outputAssetId) return;
-    setActiveResultJobId(item.id);
-    await fetchOutputUrl(item.outputAssetId, item.outputFileName || null);
-  }
-
   async function startLiveRecording() {
     if (!recordSupported) {
       toast.error("Live recording is not supported in this browser.");
@@ -389,18 +375,6 @@ export function GenerateForm({
     }
   }
 
-  const conversionsToday = React.useMemo(() => {
-    const today = new Date();
-    const y = today.getFullYear();
-    const m = today.getMonth();
-    const d = today.getDate();
-    return queue.filter((item) => {
-      if (item.status !== "succeeded") return false;
-      const t = new Date(item.createdAt);
-      return t.getFullYear() === y && t.getMonth() === m && t.getDate() === d;
-    }).length;
-  }, [queue]);
-  const dailyLimit = 50;
   const canCreateCover = !!inputAssetId && !uploadBusy && !recordingBusy && !loading;
 
   return (
@@ -910,119 +884,11 @@ export function GenerateForm({
           </div>
         </div>
 
-        <div className="p-5">
-          <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
-                Recent Jobs
-              </h3>
-            <Badge variant="secondary">{queue.filter((q) => q.status === "queued" || q.status === "running").length} pending</Badge>
-          </div>
-
-          <div className="space-y-3">
-            {queue.length === 0 ? (
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-muted-foreground">
-                No conversion started yet.
-              </div>
-            ) : (
-              queue.slice(0, 6).map((item) => (
-                <div
-                  key={item.id}
-                  ref={(el) => {
-                    queueItemRefs.current[item.id] = el;
-                  }}
-                  className={cn(
-                    "rounded-xl border p-4",
-                    item.status === "running"
-                      ? "border-cyan-400/40 bg-cyan-500/10"
-                      : item.status === "queued"
-                        ? "border-white/15 bg-white/5"
-                        : item.status === "succeeded"
-                          ? "border-emerald-400/30 bg-emerald-500/10"
-                          : "border-red-500/30 bg-red-500/10",
-                    activeResultJobId === item.id ? "ring-1 ring-cyan-300/60" : ""
-                  )}
-                >
-                  <div className="mb-2 flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold">{item.inputLabel}</div>
-                      <div className="truncate text-[11px] text-muted-foreground">Target: {item.voiceName}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {activeResultJobId === item.id ? (
-                        <span className="rounded-full border border-cyan-300/40 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-cyan-200">
-                          Selected
-                        </span>
-                      ) : null}
-                      <span className="text-xs font-semibold text-muted-foreground">{queueStatusLabel(item.status)}</span>
-                    </div>
-                  </div>
-
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className={cn(
-                        "h-full rounded-full",
-                        item.status === "failed"
-                          ? "bg-red-400"
-                          : item.status === "succeeded"
-                            ? "bg-emerald-400"
-                            : "bg-gradient-to-r from-cyan-400 to-fuchsia-400"
-                      )}
-                      style={{ width: `${Math.max(4, item.progress)}%` }}
-                    />
-                  </div>
-
-                  <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-                    <span>{formatAgo(item.createdAt)}</span>
-                    <span>{item.progress}%</span>
-                  </div>
-
-                  {item.status === "succeeded" && item.outputAssetId ? (
-                    <div className="mt-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-7 rounded-md text-[11px]"
-                        onClick={() => {
-                          void openQueueResult(item);
-                        }}
-                      >
-                        Open result
-                      </Button>
-                    </div>
-                  ) : null}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div className="p-5">
-          <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-            <span>Daily Generation Limit</span>
-            <span className="font-semibold text-cyan-300">
-              {Math.min(dailyLimit, conversionsToday)} / {dailyLimit}
-            </span>
-          </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-400"
-              style={{ width: `${Math.min(100, (Math.min(dailyLimit, conversionsToday) / dailyLimit) * 100)}%` }}
-            />
-          </div>
-        </div>
       </aside>
       </div>
 
     </div>
   );
-}
-
-function queueStatusLabel(status: QueueItem["status"]) {
-  if (status === "queued") return "Waiting";
-  if (status === "running") return "Converting";
-  if (status === "succeeded") return "Done";
-  return "Stopped";
 }
 
 function isValidAudioFile(file: File) {
@@ -1163,19 +1029,6 @@ function draggedAudioState(dt: DataTransfer): "valid" | "invalid" | "unknown" {
     sawValid = true;
   }
   return sawValid ? "valid" : "unknown";
-}
-
-function formatAgo(iso: string) {
-  const t = new Date(iso).getTime();
-  const now = Date.now();
-  const diffSec = Math.max(1, Math.floor((now - t) / 1000));
-  if (diffSec < 60) return `${diffSec}s ago`;
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return `${diffHour}h ago`;
-  const diffDay = Math.floor(diffHour / 24);
-  return `${diffDay}d ago`;
 }
 
 function uploadStatusText(state: UploadPanelState) {
