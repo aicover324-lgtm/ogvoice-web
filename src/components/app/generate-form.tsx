@@ -189,7 +189,7 @@ export function GenerateForm({
       return;
     }
     if (!inputAssetId) {
-      toast.error("Upload a singing record first.");
+      toast.error("Upload a song first.");
       return;
     }
 
@@ -223,7 +223,7 @@ export function GenerateForm({
         progress: 0,
         createdAt: new Date().toISOString(),
         voiceName: selectedVoice?.name || "Cloned voice",
-        inputLabel: inputFileName || "Singing record",
+        inputLabel: inputFileName || "Song",
       },
       ...prev.filter((p) => p.id !== nextJobId),
     ]);
@@ -548,7 +548,7 @@ export function GenerateForm({
           aria-expanded={setupOpen}
         >
           <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
-            Singing Record & Voice Style
+            Song & Voice Style
           </h2>
           <ChevronDown className={cn("h-5 w-5 text-slate-300 transition-transform", setupOpen && "rotate-180")} />
         </button>
@@ -583,7 +583,7 @@ export function GenerateForm({
             const file = e.dataTransfer.files?.[0];
             if (!file) return;
             if (!isValidAudioFile(file)) {
-              toast.error("Only wav, mp3, or flac singing records are allowed.");
+              toast.error("Only wav, mp3, or flac songs are allowed.");
               return;
             }
             if (uploadPanelBlocked) {
@@ -593,7 +593,7 @@ export function GenerateForm({
             void uploaderRef.current?.uploadFiles([file]);
           }}
           className={cn(
-            "h-full min-h-[500px] rounded-2xl bg-[#171d33] p-8 text-center transition-colors",
+            "h-full min-h-[430px] rounded-2xl bg-[#171d33] p-6 text-center transition-colors",
             dragState === "valid"
               ? "border-2 border-dashed border-cyan-400/70"
               : dragState === "invalid"
@@ -618,10 +618,10 @@ export function GenerateForm({
             )}
           </div>
           <h3 className="text-3xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
-            Upload Singing Record
+            Upload Song
           </h3>
           <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
-            Drag and drop your singing record here. Allowed formats: WAV, MP3, FLAC.
+            Drag and drop your song here. Allowed formats: WAV, MP3, FLAC.
           </p>
           <p className="mx-auto mt-1 max-w-xl text-xs text-slate-400">
             Conversion record length: minimum 10 seconds, maximum 6 minutes.
@@ -716,9 +716,9 @@ export function GenerateForm({
           ) : null}
 
           <div className="mt-5 text-xs text-muted-foreground">
-            {inputFileName ? `Selected: ${inputFileName}` : "No singing record selected yet."}
+            {inputFileName ? `Selected: ${inputFileName}` : "No song selected yet."}
           </div>
-          {inputAssetId ? <Badge className="mt-3">Singing record ready</Badge> : null}
+          {inputAssetId ? <Badge className="mt-3">Song ready</Badge> : null}
         </fieldset>
 
         <DatasetUploader
@@ -735,7 +735,7 @@ export function GenerateForm({
               return "Could not read audio length. Please choose another file.";
             }
             if (duration < MIN_SINGING_RECORD_SECONDS) {
-              return "Singing record must be at least 10 seconds.";
+              return "Song must be at least 10 seconds.";
             }
             if (duration > MAX_SINGING_RECORD_SECONDS) {
               return "Maximum singing record length is 6 minutes.";
@@ -777,7 +777,7 @@ export function GenerateForm({
               progress: 100,
               error: null,
             }));
-            toast.success("Singing record uploaded.");
+            toast.success("Song uploaded.");
           }}
         />
 
@@ -823,25 +823,9 @@ export function GenerateForm({
           </div>
         ) : null}
 
-        {uploadState.fileName ? (
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer disabled:pointer-events-auto disabled:cursor-not-allowed"
-              disabled={uploadBusy}
-              onClick={() => {
-                uploaderRef.current?.openPicker();
-              }}
-            >
-              Replace file
-            </Button>
-          </div>
-        ) : null}
         </div>
 
-        <div className="flex h-full min-h-[500px] flex-col rounded-2xl border border-white/10 bg-[#171d33] p-5">
+        <div className="flex h-full min-h-[430px] flex-col rounded-2xl border border-white/10 bg-[#171d33] p-5">
           <h3 className="flex items-center gap-2 text-xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
             Voice Style
           </h3>
@@ -951,7 +935,7 @@ export function GenerateForm({
               ) : null}
             </div>
 
-            <div className="mt-8 flex items-center justify-end gap-3 pt-2">
+            <div className="mt-6 flex items-center justify-end gap-3 pt-2">
               <Button
                 className={cn(
                   "rounded-xl px-8 disabled:pointer-events-auto disabled:cursor-not-allowed",
@@ -1300,7 +1284,7 @@ function draggedAudioState(dt: DataTransfer): "valid" | "invalid" | "unknown" {
 
 function uploadStatusText(state: UploadPanelState) {
   if (state.phase === "queued") return "Preparing upload...";
-  if (state.phase === "uploading") return "Uploading singing record...";
+  if (state.phase === "uploading") return "Uploading song...";
   if (state.phase === "confirming") return "Finalizing file...";
   if (state.phase === "optimizing") return "Optimizing your recording...";
   if (state.phase === "done") return "Upload complete.";
@@ -1321,7 +1305,7 @@ function conversionStatusHint(status: GenJob["status"]) {
   if (status === "queued") return "Your cover is in queue. Processing starts shortly.";
   if (status === "running") return "Conversion is active. Keep this tab open to see live updates.";
   if (status === "succeeded") return "Conversion finished. You can play and download from Result.";
-  return "Conversion stopped. You can retry with the same singing record.";
+  return "Conversion stopped. You can retry with the same song.";
 }
 
 function formatFileSize(size: number | null) {
