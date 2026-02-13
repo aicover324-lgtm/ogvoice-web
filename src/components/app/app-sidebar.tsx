@@ -27,7 +27,7 @@ export function AppSidebar() {
 
   return (
     <aside className="hidden w-72 shrink-0 border-r border-white/10 bg-[linear-gradient(180deg,#070d24_0%,#060b1e_100%)] text-slate-200 md:block">
-      <div className="sticky top-0 flex h-screen flex-col overflow-y-auto">
+      <div className="sticky top-0 flex h-screen flex-col overflow-hidden">
         <div className="px-5 pb-4 pt-5">
           <Link href="/app/dashboard" className="inline-flex items-center gap-3">
             <span className="grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br from-cyan-500/90 to-fuchsia-500/85 shadow-[0_10px_30px_rgba(56,189,248,0.35)]">
