@@ -58,10 +58,14 @@ function cleanUrl(value: string) {
 }
 
 function mapFiles(rawFiles: unknown): MvsepFile[] {
-  if (!Array.isArray(rawFiles)) return [];
+  const list = Array.isArray(rawFiles)
+    ? rawFiles
+    : rawFiles && typeof rawFiles === "object"
+      ? Object.values(rawFiles as Record<string, unknown>)
+      : [];
   const out: MvsepFile[] = [];
 
-  for (const row of rawFiles) {
+  for (const row of list) {
     if (!row || typeof row !== "object") continue;
     const item = row as Record<string, unknown>;
     const url = cleanUrl(toStringSafe(item.url || item.link));

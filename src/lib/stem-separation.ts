@@ -126,6 +126,35 @@ function vocalLikeFile(files: MvsepFile[]) {
   );
 }
 
+function pickMainAndInstrumental(files: MvsepFile[]) {
+  const vocalStrict = fileByRules({
+    files,
+    include: [/vocal/, /voice/, /acapella/],
+    exclude: [/back/, /lead/, /instrument/, /instrum/, /music/, /other/, /drum/, /bass/],
+  });
+  const instrumentalStrict = fileByRules({
+    files,
+    include: [/instrument/, /instrum/, /music/, /karaoke/, /no[_ -]?vocal/],
+    exclude: [/vocal/, /voice/, /lead/, /back/],
+  });
+
+  if (vocalStrict && instrumentalStrict) {
+    return { vocal: vocalStrict, instrumental: instrumentalStrict };
+  }
+
+  if (files.length >= 2) {
+    const withInstrKeyword = files.find((f) => /instrument|instrum|karaoke|no[_ -]?vocal|music/.test(f.label)) || null;
+    if (withInstrKeyword) {
+      const other = files.find((f) => f !== withInstrKeyword) || null;
+      if (other) return { vocal: other, instrumental: withInstrKeyword };
+    }
+
+    return { vocal: files[0]!, instrumental: files[1]! };
+  }
+
+  return { vocal: vocalLikeFile(files), instrumental: null };
+}
+
 function failState(state: StemJobState, message: string): StemJobState {
   return {
     ...state,
@@ -285,19 +314,21 @@ export async function advanceStemSeparationJob(args: { userId: string; jobId: st
         });
       }
 
-      const vocal = fileByRules({
-        files: result.files,
-        include: [/vocal/, /voice/],
-        exclude: [/back/, /lead/, /instrument/, /instrum/, /music/, /other/, /drum/, /bass/],
-      }) || vocalLikeFile(result.files);
-      const instrumental = fileByRules({
-        files: result.files,
-        include: [/instrument/, /instrum/, /music/, /karaoke/, /no[_ -]?vocal/],
-        exclude: [/vocal/, /voice/, /lead/, /back/],
-      });
+      const picked = pickMainAndInstrumental(result.files);
+      const vocal = picked.vocal;
+      const instrumental = picked.instrumental;
 
       if (!vocal || !instrumental) {
-        return saveState(args.userId, failState(current, "Could not identify vocal/instrumental outputs from MVSEP."));
+        const names = result.files.map((f) => f.download).join(", ");
+        return saveState(
+          args.userId,
+          failState(
+            current,
+            names
+              ? `Could not identify vocal/instrumental outputs from MVSEP. Files: ${names}`
+              : "Could not identify vocal/instrumental outputs from MVSEP."
+          )
+        );
       }
 
       const leadBack = await mvsepCreateSeparation({
