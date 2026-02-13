@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { promises as fs } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import ffmpegPath from "ffmpeg-static";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -27,6 +28,7 @@ const datasetAllowedMime = new Set(["audio/wav", "audio/x-wav"]);
 const imageAllowedMime = new Set(["image/jpeg", "image/png", "image/webp"]);
 const TARGET_DATASET_SAMPLE_RATE = 32000;
 const TARGET_DATASET_CHANNELS = 1;
+const FFMPEG_BINARY = resolveFfmpegBinary();
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -355,14 +357,20 @@ async function optimizeDatasetWav(input: Buffer) {
 
 async function runFfmpeg(args: string[]) {
   await new Promise<void>((resolve, reject) => {
-    const child = spawn("ffmpeg", args, { stdio: ["ignore", "ignore", "pipe"] });
+    const child = spawn(FFMPEG_BINARY, args, { stdio: ["ignore", "ignore", "pipe"] });
     let stderr = "";
 
     child.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
     });
 
-    child.on("error", (e) => reject(new Error(`ffmpeg launch failed: ${e.message}`)));
+    child.on("error", (e) => {
+      if ((e as NodeJS.ErrnoException).code === "ENOENT") {
+        reject(new Error(`ffmpeg binary not found at '${FFMPEG_BINARY}'`));
+        return;
+      }
+      reject(new Error(`ffmpeg launch failed: ${e.message}`));
+    });
     child.on("close", (code) => {
       if (code === 0) {
         resolve();
@@ -372,4 +380,15 @@ async function runFfmpeg(args: string[]) {
       reject(new Error(msg || `ffmpeg failed with code ${code}`));
     });
   });
+}
+
+function resolveFfmpegBinary() {
+  const fromEnv = process.env.FFMPEG_PATH?.trim();
+  if (fromEnv) return fromEnv;
+
+  if (typeof ffmpegPath === "string" && ffmpegPath.trim()) {
+    return ffmpegPath;
+  }
+
+  return "ffmpeg";
 }

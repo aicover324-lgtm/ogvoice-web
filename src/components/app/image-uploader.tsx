@@ -44,6 +44,7 @@ type PreviewConfig = {
   size?: number;
   width?: number | string;
   height?: number | string;
+  aspectRatio?: number | string;
 };
 
 export const ImageUploader = React.forwardRef<ImageUploaderHandle, {
@@ -190,7 +191,7 @@ export const ImageUploader = React.forwardRef<ImageUploaderHandle, {
 
   const previewSize = preview?.size ?? (preview?.variant === "avatar" ? 56 : 176);
   const previewWidth = preview?.width ?? previewSize;
-  const previewHeight = preview?.height ?? previewSize;
+  const previewHeight = preview?.height ?? (preview?.aspectRatio ? undefined : previewSize);
   const effectiveTrigger: "button" | "frame" = trigger ?? "button";
   const frameBlocked = dragState === "invalid";
 
@@ -227,7 +228,7 @@ export const ImageUploader = React.forwardRef<ImageUploaderHandle, {
                 ? `group relative grid place-items-center overflow-hidden rounded-full border bg-muted disabled:cursor-not-allowed ${frameBlocked ? "cursor-not-allowed ring-2 ring-destructive/35" : "cursor-pointer"}`
                 : `group relative grid place-items-center overflow-hidden rounded-xl border bg-muted disabled:cursor-not-allowed w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${frameBlocked ? "cursor-not-allowed ring-2 ring-destructive/35" : "cursor-pointer"}`
             }
-            style={{ width: previewWidth, height: previewHeight }}
+            style={{ width: previewWidth, height: previewHeight, aspectRatio: preview?.aspectRatio }}
             onDragEnter={(e) => {
               if (effectiveTrigger !== "frame") return;
               e.preventDefault();

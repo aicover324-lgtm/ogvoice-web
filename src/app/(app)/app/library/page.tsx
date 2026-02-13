@@ -4,9 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { MyLibraryPanel } from "@/components/app/my-library-panel";
 import { PageHeader } from "@/components/ui/page-header";
 
-export default async function LibraryPage() {
+export default async function LibraryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ playAssetId?: string }>;
+}) {
   const session = await getServerSession(authOptions);
   const userId = session!.user.id;
+  const params = await searchParams;
 
   const jobs = await prisma.generationJob.findMany({
     where: { userId, outputAssetId: { not: null } },
@@ -48,7 +53,9 @@ export default async function LibraryPage() {
   return (
     <main className="og-app-main">
       <PageHeader title="My Library" />
-      <MyLibraryPanel initialItems={initialItems} />
+      <div className="mt-5 md:mt-6">
+        <MyLibraryPanel initialItems={initialItems} initialAutoPlayAssetId={typeof params.playAssetId === "string" ? params.playAssetId : null} />
+      </div>
     </main>
   );
 }

@@ -120,6 +120,11 @@
   * {
     @apply outline-ring/50;
   }
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+  }
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);

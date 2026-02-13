@@ -211,7 +211,7 @@ export function NewVoiceProfilePage() {
                       alt: "Cover",
                       variant: "cover",
                       width: "100%",
-                      height: 260,
+                      aspectRatio: "1 / 1",
                     }}
                     onAssetCreated={(asset) => setCoverAssetId(asset.id)}
                   />

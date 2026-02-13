@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Plus, PlayCircle, Download, Mic2, Music3 } from "lucide-react";
+import { Plus, Info, Mic2, Music3 } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
@@ -38,7 +38,7 @@ export default async function DashboardPage() {
       },
     }),
     prisma.generationJob.findMany({
-      where: { userId },
+      where: { userId, status: "succeeded", outputAssetId: { not: null } },
       orderBy: { createdAt: "desc" },
       take: 8,
       select: {
@@ -60,7 +60,6 @@ export default async function DashboardPage() {
   ]);
 
   const [totalSongs, activeVoices, readyVoices, cloningQueue, conversionQueue] = stats;
-  const systemLoad = Math.min(95, 18 + cloningQueue * 18 + conversionQueue * 14);
 
   const outputIds = recentGenerations.map((g) => g.outputAssetId).filter((id): id is string => !!id);
   const outputAssets =
@@ -71,6 +70,7 @@ export default async function DashboardPage() {
         })
       : [];
   const outputById = new Map(outputAssets.map((a) => [a.id, a]));
+  const recentConversionRows = recentGenerations.filter((row) => !!(row.outputAssetId && outputById.has(row.outputAssetId)));
 
   return (
     <main className="og-app-main">
@@ -191,7 +191,7 @@ export default async function DashboardPage() {
               </Link>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+            <div className="flex h-[520px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
               <div className="grid grid-cols-[1.6fr_0.9fr_0.8fr_1fr] border-b border-white/10 px-4 py-3 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                 <div>Song / Voice</div>
                 <div>Date</div>
@@ -199,52 +199,47 @@ export default async function DashboardPage() {
                 <div className="text-right">Actions</div>
               </div>
 
-              {recentGenerations.length === 0 ? (
-                <div className="px-4 py-8 text-sm text-muted-foreground">No conversions yet.</div>
-              ) : (
-                recentGenerations.map((row) => {
-                  const output = row.outputAssetId ? outputById.get(row.outputAssetId) : undefined;
-                  return (
-                    <div
-                      key={row.id}
-                      className="grid grid-cols-[1.6fr_0.9fr_0.8fr_1fr] items-center border-b border-white/10 px-4 py-4 text-sm last:border-b-0"
-                    >
-                      <div className="min-w-0">
-                        <div className="truncate font-semibold">{output?.fileName || "Converted track"}</div>
-                        <div className="truncate text-xs text-muted-foreground">{row.voiceProfile.name}</div>
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                {recentConversionRows.length === 0 ? (
+                  <div className="px-4 py-8 text-sm text-muted-foreground">No conversions yet.</div>
+                ) : (
+                  recentConversionRows.map((row) => {
+                    const outputAssetId = row.outputAssetId;
+                    if (!outputAssetId) return null;
+                    const output = outputById.get(outputAssetId);
+                    return (
+                      <div
+                        key={row.id}
+                        className="grid grid-cols-[1.6fr_0.9fr_0.8fr_1fr] items-center border-b border-white/10 px-4 py-4 text-sm last:border-b-0"
+                      >
+                        <div className="min-w-0">
+                          <div className="truncate font-semibold">{output?.fileName || "Converted track"}</div>
+                          <div className="truncate text-xs text-muted-foreground">{row.voiceProfile.name}</div>
+                        </div>
+                        <div className="text-xs text-muted-foreground">{formatDate(row.createdAt)}</div>
+                        <div>
+                          <span className={`og-chip-soft text-xs ${statusChipClass(row.status)}`}>{statusLabel(row.status)}</span>
+                        </div>
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/app/library?playAssetId=${encodeURIComponent(outputAssetId)}`}
+                            className="rounded-full border border-cyan-400/30 px-3 py-1.5 text-xs font-semibold text-cyan-200 transition-colors hover:border-cyan-300 hover:text-cyan-100"
+                          >
+                            Play
+                          </Link>
+                          <Link
+                            href={`/api/assets/${encodeURIComponent(outputAssetId)}`}
+                            target="_blank"
+                            className="rounded-full border border-white/20 px-3 py-1.5 text-xs font-semibold text-slate-200 transition-colors hover:border-cyan-300/40 hover:text-cyan-100"
+                          >
+                            Download
+                          </Link>
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground">{formatDate(row.createdAt)}</div>
-                      <div>
-                        <span className={`og-chip-soft text-xs ${statusChipClass(row.status)}`}>{statusLabel(row.status)}</span>
-                      </div>
-                      <div className="flex items-center justify-end gap-2">
-                        {row.outputAssetId && row.status === "succeeded" ? (
-                          <>
-                            <Link
-                              href={`/api/assets/${encodeURIComponent(row.outputAssetId)}`}
-                              target="_blank"
-                              className="rounded-full border border-white/15 p-2 text-muted-foreground transition-colors hover:text-cyan-300"
-                              aria-label="Listen"
-                            >
-                              <PlayCircle className="h-4 w-4" />
-                            </Link>
-                            <Link
-                              href={`/api/assets/${encodeURIComponent(row.outputAssetId)}`}
-                              target="_blank"
-                              className="rounded-full border border-white/15 p-2 text-muted-foreground transition-colors hover:text-cyan-300"
-                              aria-label="Download"
-                            >
-                              <Download className="h-4 w-4" />
-                            </Link>
-                          </>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">Pending</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+                    );
+                  })
+                )}
+              </div>
             </div>
           </section>
         </div>
@@ -263,7 +258,6 @@ export default async function DashboardPage() {
           <PremiumCard className="p-4">
             <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">System Status</div>
             <div className="mt-4 space-y-4">
-              <StatusBar label="System Load" value={systemLoad} valueLabel={`${systemLoad}%`} tone="amber" />
               <StatusBar
                 label="Cloning Queue"
                 value={Math.min(100, cloningQueue * 20)}
@@ -280,15 +274,20 @@ export default async function DashboardPage() {
           </PremiumCard>
 
           <PremiumCard className="p-5">
-            <div className="text-lg font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
-              Faster Results
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-lg font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
+                Info
+              </div>
+              <span
+                title="Keep singing records clean and dry ! This improves voice cloning and conversion quality."
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-500/10 text-cyan-200"
+              >
+                <Info className="h-4 w-4" />
+              </span>
             </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Keep singing records clean and dry. This improves voice cloning and conversion quality.
+            <p className="mt-3 text-sm text-muted-foreground">
+              Keep singing records clean and dry ! This improves voice cloning and conversion quality.
             </p>
-            <Button asChild className="og-btn-gradient mt-4 w-full rounded-full cursor-pointer">
-              <Link href="/app/create/new">Create New Voice</Link>
-            </Button>
           </PremiumCard>
         </aside>
       </div>

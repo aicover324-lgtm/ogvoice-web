@@ -35,7 +35,13 @@ export type LibraryItem = {
   createdAt: string;
 };
 
-export function MyLibraryPanel({ initialItems }: { initialItems: LibraryItem[] }) {
+export function MyLibraryPanel({
+  initialItems,
+  initialAutoPlayAssetId,
+}: {
+  initialItems: LibraryItem[];
+  initialAutoPlayAssetId?: string | null;
+}) {
   const [items, setItems] = React.useState<LibraryItem[]>(initialItems);
   const [editingAssetId, setEditingAssetId] = React.useState<string | null>(null);
   const [editingFileName, setEditingFileName] = React.useState("");
@@ -44,7 +50,10 @@ export function MyLibraryPanel({ initialItems }: { initialItems: LibraryItem[] }
   const [playingAssetId, setPlayingAssetId] = React.useState<string | null>(null);
   const [loadingPlayAssetId, setLoadingPlayAssetId] = React.useState<string | null>(null);
   const [assetUrls, setAssetUrls] = React.useState<Record<string, string>>({});
+  const [focusedAssetId, setFocusedAssetId] = React.useState<string | null>(null);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  const autoPlayAttemptedRef = React.useRef<string | null>(null);
+  const itemRefs = React.useRef<Map<string, HTMLElement>>(new Map());
 
   React.useEffect(() => {
     const audio = audioRef.current;
@@ -139,41 +148,7 @@ export function MyLibraryPanel({ initialItems }: { initialItems: LibraryItem[] }
     }
   }
 
-  async function togglePlay(item: LibraryItem) {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (playingAssetId === item.assetId && !audio.paused) {
-      audio.pause();
-      setPlayingAssetId(null);
-      return;
-    }
-
-    const knownUrl = assetUrls[item.assetId];
-    if (knownUrl) {
-      await playFromUrl(item.assetId, knownUrl);
-      return;
-    }
-
-    setLoadingPlayAssetId(item.assetId);
-    try {
-      const res = await fetch(`/api/assets/${encodeURIComponent(item.assetId)}?json=1`, { cache: "no-store" });
-      const json = await res.json().catch(() => null);
-      if (!res.ok || !json?.ok) {
-        throw new Error(json?.error?.message || "Could not load track.");
-      }
-      const url = String(json.data.url || "");
-      if (!url) throw new Error("Could not load track.");
-      setAssetUrls((prev) => ({ ...prev, [item.assetId]: url }));
-      await playFromUrl(item.assetId, url);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not load track.");
-    } finally {
-      setLoadingPlayAssetId(null);
-    }
-  }
-
-  async function playFromUrl(assetId: string, url: string) {
+  const playFromUrl = React.useCallback(async (assetId: string, url: string) => {
     const audio = audioRef.current;
     if (!audio) return;
     audio.src = url;
@@ -184,7 +159,67 @@ export function MyLibraryPanel({ initialItems }: { initialItems: LibraryItem[] }
       toast.error("Could not play track.");
       setPlayingAssetId(null);
     }
-  }
+  }, []);
+
+  const togglePlay = React.useCallback(
+    async (item: LibraryItem) => {
+      const audio = audioRef.current;
+      if (!audio) return;
+
+      if (playingAssetId === item.assetId && !audio.paused) {
+        audio.pause();
+        setPlayingAssetId(null);
+        return;
+      }
+
+      const knownUrl = assetUrls[item.assetId];
+      if (knownUrl) {
+        await playFromUrl(item.assetId, knownUrl);
+        return;
+      }
+
+      setLoadingPlayAssetId(item.assetId);
+      try {
+        const res = await fetch(`/api/assets/${encodeURIComponent(item.assetId)}?json=1`, { cache: "no-store" });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json?.ok) {
+          throw new Error(json?.error?.message || "Could not load track.");
+        }
+        const url = String(json.data.url || "");
+        if (!url) throw new Error("Could not load track.");
+        setAssetUrls((prev) => ({ ...prev, [item.assetId]: url }));
+        await playFromUrl(item.assetId, url);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Could not load track.");
+      } finally {
+        setLoadingPlayAssetId(null);
+      }
+    },
+    [assetUrls, playFromUrl, playingAssetId]
+  );
+
+  React.useEffect(() => {
+    const targetAssetId = (initialAutoPlayAssetId || "").trim();
+    if (!targetAssetId) return;
+    if (autoPlayAttemptedRef.current === targetAssetId) return;
+
+    const item = items.find((x) => x.assetId === targetAssetId);
+    if (!item) return;
+
+    autoPlayAttemptedRef.current = targetAssetId;
+    setFocusedAssetId(targetAssetId);
+    const cardEl = itemRefs.current.get(targetAssetId);
+    if (cardEl) {
+      cardEl.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    }
+    void togglePlay(item);
+  }, [initialAutoPlayAssetId, items, togglePlay]);
+
+  React.useEffect(() => {
+    if (!focusedAssetId) return;
+    const t = window.setTimeout(() => setFocusedAssetId(null), 1800);
+    return () => window.clearTimeout(t);
+  }, [focusedAssetId]);
 
   return (
     <section className="rounded-2xl border border-white/10 bg-[#101a35] p-4 md:p-5">
@@ -211,7 +246,16 @@ export function MyLibraryPanel({ initialItems }: { initialItems: LibraryItem[] }
             return (
               <article
                 key={item.assetId}
-                className="relative flex min-h-[360px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.03)_100%)] p-3"
+                ref={(el) => {
+                  if (el) itemRefs.current.set(item.assetId, el);
+                  else itemRefs.current.delete(item.assetId);
+                }}
+                className={
+                  "relative flex min-h-[360px] flex-col overflow-hidden rounded-2xl border bg-[linear-gradient(180deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.03)_100%)] p-3 transition-colors " +
+                  (focusedAssetId === item.assetId
+                    ? "border-cyan-300/60 shadow-[0_0_0_1px_rgba(34,211,238,0.35)]"
+                    : "border-white/10")
+                }
               >
                 <div className="relative overflow-hidden rounded-xl border border-white/10">
                   <VoiceLibraryCover voiceId={item.voiceId} alt={item.voiceName} />

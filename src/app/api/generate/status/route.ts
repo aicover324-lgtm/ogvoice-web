@@ -42,6 +42,7 @@ export async function GET(req: Request) {
       id: true,
       userId: true,
       voiceProfileId: true,
+      inputAssetId: true,
       status: true,
       progress: true,
       runpodRequestId: true,
@@ -99,7 +100,8 @@ export async function GET(req: Request) {
             jobMutated = true;
           }
         } else if (!job.outputAssetId) {
-          const fileName = `${canonicalVoiceAssetBaseName(job.voiceProfile.name)}-cover.wav`;
+          const inputSongSuffix = await buildInputSongSuffix(session.user.id, job.inputAssetId);
+          const fileName = `${canonicalVoiceAssetBaseName(job.voiceProfile.name)}-cover${inputSongSuffix}.wav`;
           const created = await prisma.uploadAsset.create({
             data: {
               userId: session.user.id,
@@ -214,7 +216,8 @@ export async function GET(req: Request) {
             jobMutated = true;
           }
         } else if (!job.outputAssetId) {
-          const fileName = `${canonicalVoiceAssetBaseName(job.voiceProfile.name)}-converted.wav`;
+          const inputSongSuffix = await buildInputSongSuffix(session.user.id, job.inputAssetId);
+          const fileName = `${canonicalVoiceAssetBaseName(job.voiceProfile.name)}-converted${inputSongSuffix}.wav`;
           const created = await prisma.uploadAsset.create({
             data: {
               userId: session.user.id,
@@ -416,6 +419,36 @@ function toUserFacingCoverFailure(args: { status: string; error: unknown }) {
     return "Cover generation failed because of a temporary server issue.";
   }
   return "Cover generation failed. Please try again.";
+}
+
+async function buildInputSongSuffix(userId: string, inputAssetId: string | null) {
+  if (!inputAssetId) return "";
+
+  const asset = await prisma.uploadAsset.findFirst({
+    where: { id: inputAssetId, userId, type: "song_input" },
+    select: { fileName: true },
+  });
+
+  const baseName = stripFileExtension(asset?.fileName || "").trim();
+  if (!baseName) return "";
+
+  const normalized = baseName
+    .toLocaleLowerCase("tr-TR")
+    .replace(/\s+/g, "_")
+    .replace(/[^\p{L}\p{N}_-]/gu, "-")
+    .replace(/[-_]{2,}/g, "_")
+    .replace(/^[-_]+|[-_]+$/g, "")
+    .slice(0, 48);
+
+  if (!normalized) return "";
+  return `_${normalized}`;
+}
+
+function stripFileExtension(fileName: string) {
+  if (!fileName) return "";
+  const idx = fileName.lastIndexOf(".");
+  if (idx <= 0) return fileName;
+  return fileName.slice(0, idx);
 }
 
 export const runtime = "nodejs";

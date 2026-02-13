@@ -4,7 +4,6 @@ import { authOptions } from "@/lib/auth";
 import { AppSidebar } from "@/components/app/app-sidebar";
 import { MobileNav } from "@/components/app/mobile-nav";
 import { UserMenu } from "@/components/app/user-menu";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -24,7 +23,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </div>
             <div className="hidden md:block" />
             <div className="flex items-center gap-2">
-              <ThemeToggle />
               <UserMenu />
             </div>
           </div>
