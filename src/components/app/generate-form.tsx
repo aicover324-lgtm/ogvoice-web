@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2, ChevronDown, CloudUpload, Download, FileAudio, LoaderCircle, Mic, PlusCircle, Share2, Square, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, CloudUpload, Download, LoaderCircle, Mic, PlusCircle, Share2, Square, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -115,7 +115,6 @@ export function GenerateForm({
     fileSize: null,
     error: null,
   });
-  const [inputPreviewUrl, setInputPreviewUrl] = React.useState<string | null>(null);
   const [activeResultJobId, setActiveResultJobId] = React.useState<string | null>(
     initialQueue.find((item) => item.status === "succeeded" && item.outputAssetId)?.id ?? null
   );
@@ -135,7 +134,6 @@ export function GenerateForm({
   const [resultOpen, setResultOpen] = React.useState(true);
 
   const uploaderRef = React.useRef<DatasetUploaderHandle | null>(null);
-  const localPreviewUrlRef = React.useRef<string | null>(null);
   const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
   const mediaStreamRef = React.useRef<MediaStream | null>(null);
   const recordingChunksRef = React.useRef<BlobPart[]>([]);
@@ -161,9 +159,6 @@ export function GenerateForm({
 
   React.useEffect(() => {
     return () => {
-      if (localPreviewUrlRef.current) {
-        URL.revokeObjectURL(localPreviewUrlRef.current);
-      }
       if (recordingTimerRef.current) {
         window.clearInterval(recordingTimerRef.current);
         recordingTimerRef.current = null;
@@ -555,7 +550,7 @@ export function GenerateForm({
 
         {setupOpen ? (
           <div className="grid items-stretch gap-6 p-4 xl:grid-cols-2">
-        <div className="space-y-5 h-full">
+        <div className="space-y-4">
         <fieldset
           onDragEnter={(e) => {
             e.preventDefault();
@@ -593,7 +588,7 @@ export function GenerateForm({
             void uploaderRef.current?.uploadFiles([file]);
           }}
           className={cn(
-            "h-full min-h-[430px] rounded-2xl bg-[#171d33] p-6 text-center transition-colors",
+            "min-h-[360px] rounded-2xl bg-[#171d33] p-6 text-center transition-colors",
             dragState === "valid"
               ? "border-2 border-dashed border-cyan-400/70"
               : dragState === "invalid"
@@ -752,12 +747,6 @@ export function GenerateForm({
               fileSize: file.size,
               error: null,
             });
-            if (localPreviewUrlRef.current) {
-              URL.revokeObjectURL(localPreviewUrlRef.current);
-            }
-            const nextUrl = URL.createObjectURL(file);
-            localPreviewUrlRef.current = nextUrl;
-            setInputPreviewUrl(nextUrl);
           }}
           onUploadStateChange={(next: DatasetUploadState) => {
             setUploadState((prev) => ({
@@ -781,51 +770,9 @@ export function GenerateForm({
           }}
         />
 
-        {uploadState.fileName ? (
-          <div className="rounded-2xl border border-white/10 bg-[#171d33] p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-lg bg-cyan-500/15 text-cyan-200">
-                  <FileAudio className="h-5 w-5" />
-                </span>
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold">{uploadState.fileName}</div>
-                  <div className="text-xs text-slate-400">{formatFileSize(uploadState.fileSize)}</div>
-                </div>
-              </div>
-              <Badge
-                variant="outline"
-                className={cn(
-                  uploadBusy
-                    ? "border-cyan-300/35 bg-cyan-400/10 text-cyan-200"
-                    : uploadState.phase === "done"
-                      ? "border-emerald-300/35 bg-emerald-400/10 text-emerald-200"
-                    : uploadState.phase === "error"
-                        ? "border-red-300/35 bg-red-400/10 text-red-200"
-                        : uploadState.phase === "cancelled"
-                          ? "border-red-300/35 bg-red-400/10 text-red-200"
-                        : "border-white/20 text-slate-300"
-                )}
-              >
-                {uploadBusy
-                  ? "Uploading"
-                  : uploadState.phase === "done"
-                    ? "Ready"
-                    : uploadState.phase === "cancelled"
-                      ? "Cancelled"
-                      : uploadState.phase === "error"
-                        ? "Upload failed"
-                        : "Selected"}
-              </Badge>
-            </div>
-
-            {inputPreviewUrl ? <CustomAudioPlayer src={inputPreviewUrl} preload="metadata" variant="compact" className="mt-3 w-full" /> : null}
-          </div>
-        ) : null}
-
         </div>
 
-        <div className="flex h-full min-h-[430px] flex-col rounded-2xl border border-white/10 bg-[#171d33] p-5">
+        <div className="flex min-h-[360px] flex-col rounded-2xl border border-white/10 bg-[#171d33] p-5">
           <h3 className="flex items-center gap-2 text-xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
             Voice Style
           </h3>
@@ -935,7 +882,7 @@ export function GenerateForm({
               ) : null}
             </div>
 
-            <div className="mt-6 flex items-center justify-end gap-3 pt-2">
+            <div className="mt-4 flex items-center justify-end gap-3 pt-1">
               <Button
                 className={cn(
                   "rounded-xl px-8 disabled:pointer-events-auto disabled:cursor-not-allowed",
@@ -1306,18 +1253,6 @@ function conversionStatusHint(status: GenJob["status"]) {
   if (status === "running") return "Conversion is active. Keep this tab open to see live updates.";
   if (status === "succeeded") return "Conversion finished. You can play and download from Result.";
   return "Conversion stopped. You can retry with the same song.";
-}
-
-function formatFileSize(size: number | null) {
-  if (!size || size <= 0) return "Unknown size";
-  const units = ["B", "KB", "MB", "GB"];
-  let value = size;
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit += 1;
-  }
-  return `${value.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
 }
 
 async function readAudioDurationSeconds(file: File) {
