@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2, CloudUpload, Download, FileAudio, LoaderCircle, Mic, PlusCircle, Share2, Square, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, CloudUpload, Download, FileAudio, LoaderCircle, Mic, PlusCircle, Share2, Square, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -130,6 +130,9 @@ export function GenerateForm({
   const [recording, setRecording] = React.useState(false);
   const [recordingStarting, setRecordingStarting] = React.useState(false);
   const [recordingElapsedSec, setRecordingElapsedSec] = React.useState(0);
+  const [voiceCloneOpen, setVoiceCloneOpen] = React.useState(true);
+  const [setupOpen, setSetupOpen] = React.useState(true);
+  const [resultOpen, setResultOpen] = React.useState(true);
 
   const uploaderRef = React.useRef<DatasetUploaderHandle | null>(null);
   const localPreviewUrlRef = React.useRef<string | null>(null);
@@ -480,55 +483,79 @@ export function GenerateForm({
   return (
     <div className="space-y-6">
       <div className="grid items-start gap-6">
-      <aside className="min-w-0 self-start rounded-2xl border border-white/10 bg-[#11172b]">
-        <div className="border-b border-white/10 p-4">
-          <div className="mb-3 flex items-center justify-between">
+      <section className="min-w-0 self-start rounded-2xl border border-white/10 bg-[#11172b]">
+        <button
+          type="button"
+          onClick={() => setVoiceCloneOpen((v) => !v)}
+          className="flex w-full cursor-pointer items-center justify-between gap-3 border-b border-white/10 p-4 text-left"
+          aria-expanded={voiceCloneOpen}
+        >
+          <div className="flex min-w-0 items-center gap-3">
             <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
-              Target Voice
+              Voice Clone
             </h2>
-            <Link href="/app/create/new" className="inline-flex items-center gap-1 text-xs font-semibold text-cyan-300 hover:text-cyan-200">
-              <PlusCircle className="h-3.5 w-3.5" />
-              Clone New
-            </Link>
+            <span className="inline-flex items-center rounded-full border border-cyan-300/30 bg-cyan-400/10 px-2 py-0.5 text-[11px] font-semibold text-cyan-200">
+              {voices.length}
+            </span>
           </div>
-          <div className="rounded-lg border border-white/10 bg-white/5 p-1 text-xs">
-            <div className="rounded-md bg-white/10 px-3 py-1.5 text-center font-semibold">My Clones</div>
-          </div>
-        </div>
+          <ChevronDown className={cn("h-5 w-5 text-slate-300 transition-transform", voiceCloneOpen && "rotate-180")} />
+        </button>
 
-        <div className="space-y-3 p-4">
-          {voices.map((voice) => {
-            const active = voice.id === voiceProfileId;
-            return (
-              <button
-                key={voice.id}
-                type="button"
-                onClick={() => setVoiceProfileId(voice.id)}
-                className={cn(
-                  "w-full rounded-xl border p-3 text-left transition-colors",
-                  active
-                    ? "border-cyan-400/70 bg-cyan-500/10"
-                    : "border-white/10 bg-white/5 hover:border-white/20"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <VoiceCoverThumb voiceId={voice.id} size={44} className="overflow-hidden rounded-full border border-white/15" />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold">{voice.name}</div>
-                    <div className="truncate text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                      {voice.language || "Cloned Voice"}
+        {voiceCloneOpen ? (
+          <div className="space-y-3 p-4">
+            <div className="mb-2 flex justify-end">
+              <Link href="/app/create/new" className="inline-flex items-center gap-1 text-xs font-semibold text-cyan-300 hover:text-cyan-200">
+                <PlusCircle className="h-3.5 w-3.5" />
+                Clone New
+              </Link>
+            </div>
+            {voices.map((voice) => {
+              const active = voice.id === voiceProfileId;
+              return (
+                <button
+                  key={voice.id}
+                  type="button"
+                  onClick={() => setVoiceProfileId(voice.id)}
+                  className={cn(
+                    "w-full cursor-pointer rounded-xl border p-3 text-left transition-colors",
+                    active
+                      ? "border-cyan-400/70 bg-cyan-500/10"
+                      : "border-white/10 bg-white/5 hover:border-white/20"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <VoiceCoverThumb voiceId={voice.id} size={44} className="overflow-hidden rounded-full border border-white/15" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold">{voice.name}</div>
+                      <div className="truncate text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                        {voice.language || "Cloned Voice"}
+                      </div>
                     </div>
+                    {active ? <CheckCircle2 className="h-4 w-4 text-cyan-300" /> : null}
                   </div>
-                  {active ? <CheckCircle2 className="h-4 w-4 text-cyan-300" /> : null}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </aside>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+      </section>
 
-      <section className="min-w-0 self-start grid gap-6 xl:grid-cols-2">
-        <div className="space-y-5">
+      <section className="min-w-0 self-start rounded-2xl border border-white/10 bg-[#11172b]">
+        <button
+          type="button"
+          onClick={() => setSetupOpen((v) => !v)}
+          className="flex w-full cursor-pointer items-center justify-between gap-3 border-b border-white/10 p-4 text-left"
+          aria-expanded={setupOpen}
+        >
+          <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
+            Singing Record & Voice Style
+          </h2>
+          <ChevronDown className={cn("h-5 w-5 text-slate-300 transition-transform", setupOpen && "rotate-180")} />
+        </button>
+
+        {setupOpen ? (
+          <div className="grid items-stretch gap-6 p-4 xl:grid-cols-2">
+        <div className="space-y-5 h-full">
         <fieldset
           onDragEnter={(e) => {
             e.preventDefault();
@@ -566,7 +593,7 @@ export function GenerateForm({
             void uploaderRef.current?.uploadFiles([file]);
           }}
           className={cn(
-            "min-h-[560px] rounded-2xl bg-[#171d33] p-10 text-center transition-colors",
+            "h-full min-h-[620px] rounded-2xl bg-[#171d33] p-10 text-center transition-colors",
             dragState === "valid"
               ? "border-2 border-dashed border-cyan-400/70"
               : dragState === "invalid"
@@ -812,7 +839,7 @@ export function GenerateForm({
         ) : null}
         </div>
 
-        <div className="h-full min-h-[560px] rounded-2xl border border-white/10 bg-[#171d33] p-5">
+        <div className="flex h-full min-h-[620px] flex-col rounded-2xl border border-white/10 bg-[#171d33] p-5">
           <h3 className="flex items-center gap-2 text-xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
             Voice Style
           </h3>
@@ -922,7 +949,7 @@ export function GenerateForm({
               ) : null}
             </div>
 
-            <div className="mt-6 flex items-center justify-end gap-3 pt-5">
+            <div className="mt-auto flex items-center justify-end gap-3 pt-5">
               <Button
                 className={cn(
                   "rounded-xl px-8 disabled:pointer-events-auto disabled:cursor-not-allowed",
@@ -939,16 +966,28 @@ export function GenerateForm({
 
           {job?.status === "failed" ? <div className="mt-4 text-sm text-red-300">{job.errorMessage || "Conversion failed."}</div> : null}
         </div>
+          </div>
+        ) : null}
       </section>
 
-      <aside className="min-w-0 self-start overflow-hidden rounded-2xl border border-white/10 bg-[#11172b]">
-        <div className="border-b border-white/10 p-5">
+      <section className="min-w-0 self-start overflow-hidden rounded-2xl border border-white/10 bg-[#11172b]">
+        <button
+          type="button"
+          onClick={() => setResultOpen((v) => !v)}
+          className="flex w-full cursor-pointer items-center justify-between gap-3 border-b border-white/10 p-4 text-left"
+          aria-expanded={resultOpen}
+        >
           <h3 className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
-            Latest Result
+            Result
           </h3>
+          <ChevronDown className={cn("h-5 w-5 text-slate-300 transition-transform", resultOpen && "rotate-180")} />
+        </button>
+
+        {resultOpen ? (
+        <div className="border-b border-white/10 p-5">
           {activeResultItem ? (
             <div className="mt-2 inline-flex items-center rounded-full border border-cyan-300/35 bg-cyan-400/10 px-2.5 py-1 text-[11px] font-semibold text-cyan-200">
-              Now playing from queue
+              Now playing
             </div>
           ) : null}
 
@@ -1065,13 +1104,13 @@ export function GenerateForm({
                 <Button asChild className="og-btn-gradient mt-3 w-full rounded-xl">
                   <Link href={outputUrl} target="_blank" download={outputFileName || "converted.wav"}>
                     <Download className="mr-2 h-4 w-4" />
-                    Download latest
+                    Download
                   </Link>
                 </Button>
               ) : (
                 <Button className="mt-3 w-full rounded-xl" disabled>
                   <Download className="mr-2 h-4 w-4" />
-                  Download latest
+                  Download
                 </Button>
               )}
             </div>
@@ -1104,8 +1143,9 @@ export function GenerateForm({
             </div>
           ) : null}
         </div>
+        ) : null}
 
-      </aside>
+      </section>
       </div>
 
     </div>
@@ -1278,7 +1318,7 @@ function conversionStatusText(status: GenJob["status"], progress: number) {
 function conversionStatusHint(status: GenJob["status"]) {
   if (status === "queued") return "Your cover is in queue. Processing starts shortly.";
   if (status === "running") return "Conversion is active. Keep this tab open to see live updates.";
-  if (status === "succeeded") return "Conversion finished. You can play and download from Latest Result.";
+  if (status === "succeeded") return "Conversion finished. You can play and download from Result.";
   return "Conversion stopped. You can retry with the same singing record.";
 }
 
