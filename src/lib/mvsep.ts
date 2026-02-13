@@ -139,18 +139,58 @@ export async function mvsepCreateSeparation(args: CreateArgs) {
 }
 
 export async function mvsepGetSeparation(hash: string): Promise<MvsepGetResult> {
-  const u = new URL(`${MVSEP_BASE_URL}/separation/get`);
-  u.searchParams.set("hash", hash);
+  async function getRegular(byHash: string): Promise<MvsepGetResult> {
+    const u = new URL(`${MVSEP_BASE_URL}/separation/get`);
+    u.searchParams.set("hash", byHash);
+    const res = await fetch(u.toString(), { method: "GET", cache: "no-store" });
+    const json = (await parseJsonOrThrow(res)) as Record<string, unknown>;
+    const data = (json.data && typeof json.data === "object" ? json.data : {}) as Record<string, unknown>;
+    return {
+      success: Boolean(json.success),
+      status: toStringSafe(json.status || "not_found").toLowerCase(),
+      message: toStringSafe(data.message),
+      files: mapFiles(data.files),
+      raw: json,
+    };
+  }
 
-  const res = await fetch(u.toString(), { method: "GET", cache: "no-store" });
-  const json = (await parseJsonOrThrow(res)) as Record<string, unknown>;
-  const data = (json.data && typeof json.data === "object" ? json.data : {}) as Record<string, unknown>;
+  const primary = await getRegular(hash);
+  if (primary.status !== "not_found") return primary;
+
+  // Some MVSEP jobs created from remote URLs are tracked under get-remote.
+  const remoteUrl = new URL(`${MVSEP_BASE_URL}/separation/get-remote`);
+  remoteUrl.searchParams.set("hash", hash);
+  const remoteRes = await fetch(remoteUrl.toString(), { method: "GET", cache: "no-store" });
+  const remoteJson = (await parseJsonOrThrow(remoteRes)) as Record<string, unknown>;
+  const remoteData =
+    remoteJson.data && typeof remoteJson.data === "object"
+      ? (remoteJson.data as Record<string, unknown>)
+      : {};
+  const remoteStatus = toStringSafe(remoteJson.status || "not_found").toLowerCase();
+
+  if (remoteStatus === "done") {
+    const promotedHash = toStringSafe(remoteData.hash);
+    if (promotedHash) {
+      return await getRegular(promotedHash);
+    }
+
+    const link = toStringSafe(remoteData.link);
+    if (link) {
+      try {
+        const parsed = new URL(link);
+        const linkedHash = parsed.searchParams.get("hash");
+        if (linkedHash) return await getRegular(linkedHash);
+      } catch {
+        // ignore parse errors and fall through
+      }
+    }
+  }
 
   return {
-    success: Boolean(json.success),
-    status: toStringSafe(json.status || "not_found").toLowerCase(),
-    message: toStringSafe(data.message),
-    files: mapFiles(data.files),
-    raw: json,
+    success: Boolean(remoteJson.success),
+    status: remoteStatus,
+    message: toStringSafe(remoteData.message) || primary.message,
+    files: [],
+    raw: { primary: primary.raw, remote: remoteJson },
   };
 }
