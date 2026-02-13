@@ -14,24 +14,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen overflow-x-hidden">
       <AppSidebar />
       <div className="min-h-screen overflow-x-hidden md:pl-72">
-        <div className="flex min-h-screen flex-col overflow-x-hidden">
-          <header className="sticky top-0 z-30 border-b border-white/10 bg-black/95">
-            <div className="flex h-16 items-center justify-between px-4">
-              <div className="flex items-center gap-2 md:hidden">
-                <MobileNav />
-                <div className="font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
-                  OG Voice
-                </div>
-              </div>
-              <div className="hidden md:block" />
-              <div className="flex items-center gap-2">
-                <ThemeToggle />
-                <UserMenu />
+        <header className="fixed inset-x-0 top-0 z-30 border-b border-white/10 bg-black/95 md:left-72">
+          <div className="flex h-16 items-center justify-between px-4">
+            <div className="flex items-center gap-2 md:hidden">
+              <MobileNav />
+              <div className="font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
+                OG Voice
               </div>
             </div>
-          </header>
-          <div className="flex-1">{children}</div>
-        </div>
+            <div className="hidden md:block" />
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <UserMenu />
+            </div>
+          </div>
+        </header>
+        <div className="min-h-screen overflow-x-hidden pt-16">{children}</div>
       </div>
     </div>
   );
