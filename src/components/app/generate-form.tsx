@@ -593,7 +593,7 @@ export function GenerateForm({
             void uploaderRef.current?.uploadFiles([file]);
           }}
           className={cn(
-            "h-full min-h-[620px] rounded-2xl bg-[#171d33] p-10 text-center transition-colors",
+            "h-full min-h-[500px] rounded-2xl bg-[#171d33] p-8 text-center transition-colors",
             dragState === "valid"
               ? "border-2 border-dashed border-cyan-400/70"
               : dragState === "invalid"
@@ -839,7 +839,7 @@ export function GenerateForm({
         ) : null}
         </div>
 
-        <div className="flex h-full min-h-[620px] flex-col rounded-2xl border border-white/10 bg-[#171d33] p-5">
+        <div className="flex h-full min-h-[500px] flex-col rounded-2xl border border-white/10 bg-[#171d33] p-5">
           <h3 className="flex items-center gap-2 text-xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
             Voice Style
           </h3>
@@ -949,7 +949,7 @@ export function GenerateForm({
               ) : null}
             </div>
 
-            <div className="mt-auto flex items-center justify-end gap-3 pt-5">
+            <div className="mt-8 flex items-center justify-end gap-3 pt-2">
               <Button
                 className={cn(
                   "rounded-xl px-8 disabled:pointer-events-auto disabled:cursor-not-allowed",
