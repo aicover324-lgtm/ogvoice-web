@@ -392,34 +392,13 @@ export async function advanceStemSeparationJob(args: { userId: string; jobId: st
         return saveState(args.userId, failState(current, "Could not identify lead/back vocal files."));
       }
 
-      const [dereverbLead, dereverbBack] = await Promise.all([
-        mvsepCreateSeparation({
-          url: leadFile.url,
-          sepType: 9,
-          addOpt1: 16,
-          addOpt2: 0.3,
-          outputFormat: 1,
-        }),
-        mvsepCreateSeparation({
-          url: backFile.url,
-          sepType: 9,
-          addOpt1: 16,
-          addOpt2: 0.3,
-          outputFormat: 1,
-        }),
-      ]);
-
       return saveState(args.userId, {
         ...current,
         status: "running",
         stage: "dereverb_wait",
         progress: 56,
-        message: "Removing echo and reverb...",
-        hashes: {
-          ...current.hashes,
-          dereverbLead: dereverbLead.hash,
-          dereverbBack: dereverbBack.hash,
-        },
+        message: "Removing echo and reverb (lead vocal)...",
+        hashes: { ...current.hashes, dereverbLead: null, dereverbBack: null },
         urls: {
           ...current.urls,
           leadVocal: leadFile.url,
@@ -429,63 +408,92 @@ export async function advanceStemSeparationJob(args: { userId: string; jobId: st
     }
 
     if (current.stage === "dereverb_wait") {
-      if (!current.hashes.dereverbLead || !current.hashes.dereverbBack) {
-        return saveState(args.userId, failState(current, "Missing de-reverb hashes."));
-      }
-      const [leadStatus, backStatus] = await Promise.all([
-        mvsepGetSeparation(current.hashes.dereverbLead),
-        mvsepGetSeparation(current.hashes.dereverbBack),
-      ]);
-
-      if ([leadStatus.status, backStatus.status].some((s) => s === "failed" || s === "not_found")) {
-        return saveState(
-          args.userId,
-          failState(current, leadStatus.message || backStatus.message || "Reverb/echo removal failed.")
-        );
+      if (!current.urls.leadVocal || !current.urls.backVocal) {
+        return saveState(args.userId, failState(current, "Missing lead/back vocal URLs."));
       }
 
-      if (WAITING_STATUSES.has(leadStatus.status) || WAITING_STATUSES.has(backStatus.status)) {
+      if (!current.hashes.dereverbLead) {
+        const lead = await mvsepCreateSeparation({
+          url: current.urls.leadVocal,
+          sepType: 9,
+          addOpt1: 16,
+          addOpt2: 0.3,
+          outputFormat: 1,
+        });
         return saveState(args.userId, {
           ...current,
           status: "running",
-          progress: Math.max(current.progress, 68),
-          message: "Removing echo and reverb...",
+          progress: Math.max(current.progress, 58),
+          message: "Removing echo and reverb (lead vocal)...",
+          hashes: { ...current.hashes, dereverbLead: lead.hash },
+        });
+      }
+
+      const leadStatus = await mvsepGetSeparation(current.hashes.dereverbLead);
+      if (leadStatus.status === "failed" || leadStatus.status === "not_found") {
+        return saveState(args.userId, failState(current, leadStatus.message || "Lead vocal de-reverb failed."));
+      }
+      if (WAITING_STATUSES.has(leadStatus.status)) {
+        return saveState(args.userId, {
+          ...current,
+          status: "running",
+          progress: Math.max(current.progress, 64),
+          message: "Removing echo and reverb (lead vocal)...",
         });
       }
 
       const leadDry = vocalLikeFile(leadStatus.files);
-      const backDry = vocalLikeFile(backStatus.files);
-      if (!leadDry || !backDry) {
-        return saveState(args.userId, failState(current, "Could not identify de-reverbed vocals."));
+      if (!leadDry) {
+        return saveState(args.userId, failState(current, "Could not identify de-reverbed lead vocal."));
       }
 
-      const [denoiseLead, denoiseBack] = await Promise.all([
-        mvsepCreateSeparation({
-          url: leadDry.url,
+      if (!current.hashes.dereverbBack) {
+        const back = await mvsepCreateSeparation({
+          url: current.urls.backVocal,
           sepType: 9,
-          addOpt1: 15,
+          addOpt1: 16,
           addOpt2: 0.3,
           outputFormat: 1,
-        }),
-        mvsepCreateSeparation({
-          url: backDry.url,
-          sepType: 9,
-          addOpt1: 15,
-          addOpt2: 0.3,
-          outputFormat: 1,
-        }),
-      ]);
+        });
+        return saveState(args.userId, {
+          ...current,
+          status: "running",
+          progress: Math.max(current.progress, 70),
+          message: "Removing echo and reverb (back vocal)...",
+          hashes: { ...current.hashes, dereverbBack: back.hash },
+          urls: { ...current.urls, leadDeryverbed: leadDry.url },
+        });
+      }
+
+      const backStatus = await mvsepGetSeparation(current.hashes.dereverbBack);
+      if (backStatus.status === "failed" || backStatus.status === "not_found") {
+        return saveState(args.userId, failState(current, backStatus.message || "Back vocal de-reverb failed."));
+      }
+      if (WAITING_STATUSES.has(backStatus.status)) {
+        return saveState(args.userId, {
+          ...current,
+          status: "running",
+          progress: Math.max(current.progress, 74),
+          message: "Removing echo and reverb (back vocal)...",
+          urls: { ...current.urls, leadDeryverbed: leadDry.url },
+        });
+      }
+
+      const backDry = vocalLikeFile(backStatus.files);
+      if (!backDry) {
+        return saveState(args.userId, failState(current, "Could not identify de-reverbed back vocal."));
+      }
 
       return saveState(args.userId, {
         ...current,
         status: "running",
         stage: "denoise_wait",
         progress: 80,
-        message: "Applying denoise...",
+        message: "Applying denoise (lead vocal)...",
         hashes: {
           ...current.hashes,
-          denoiseLead: denoiseLead.hash,
-          denoiseBack: denoiseBack.hash,
+          denoiseLead: null,
+          denoiseBack: null,
         },
         urls: {
           ...current.urls,
@@ -496,38 +504,87 @@ export async function advanceStemSeparationJob(args: { userId: string; jobId: st
     }
 
     if (current.stage === "denoise_wait") {
-      if (!current.hashes.denoiseLead || !current.hashes.denoiseBack) {
-        return saveState(args.userId, failState(current, "Missing denoise hashes."));
-      }
-      const [leadStatus, backStatus] = await Promise.all([
-        mvsepGetSeparation(current.hashes.denoiseLead),
-        mvsepGetSeparation(current.hashes.denoiseBack),
-      ]);
-
-      if ([leadStatus.status, backStatus.status].some((s) => s === "failed" || s === "not_found")) {
-        return saveState(args.userId, failState(current, leadStatus.message || backStatus.message || "Denoise failed."));
+      if (!current.urls.leadDeryverbed || !current.urls.backDeryverbed) {
+        return saveState(args.userId, failState(current, "Missing de-reverbed vocal URLs."));
       }
 
-      if (WAITING_STATUSES.has(leadStatus.status) || WAITING_STATUSES.has(backStatus.status)) {
+      if (!current.hashes.denoiseLead) {
+        const lead = await mvsepCreateSeparation({
+          url: current.urls.leadDeryverbed,
+          sepType: 9,
+          addOpt1: 15,
+          addOpt2: 0.3,
+          outputFormat: 1,
+        });
         return saveState(args.userId, {
           ...current,
           status: "running",
-          progress: Math.max(current.progress, 88),
-          message: "Applying denoise...",
+          progress: Math.max(current.progress, 82),
+          message: "Applying denoise (lead vocal)...",
+          hashes: { ...current.hashes, denoiseLead: lead.hash },
+        });
+      }
+
+      const leadStatus = await mvsepGetSeparation(current.hashes.denoiseLead);
+      if (leadStatus.status === "failed" || leadStatus.status === "not_found") {
+        return saveState(args.userId, failState(current, leadStatus.message || "Lead vocal denoise failed."));
+      }
+      if (WAITING_STATUSES.has(leadStatus.status)) {
+        return saveState(args.userId, {
+          ...current,
+          status: "running",
+          progress: Math.max(current.progress, 86),
+          message: "Applying denoise (lead vocal)...",
         });
       }
 
       const leadRaw = vocalLikeFile(leadStatus.files);
+      if (!leadRaw) {
+        return saveState(args.userId, failState(current, "Could not identify denoised lead vocal."));
+      }
+
+      if (!current.hashes.denoiseBack) {
+        const back = await mvsepCreateSeparation({
+          url: current.urls.backDeryverbed,
+          sepType: 9,
+          addOpt1: 15,
+          addOpt2: 0.3,
+          outputFormat: 1,
+        });
+        return saveState(args.userId, {
+          ...current,
+          status: "running",
+          progress: Math.max(current.progress, 90),
+          message: "Applying denoise (back vocal)...",
+          hashes: { ...current.hashes, denoiseBack: back.hash },
+          urls: { ...current.urls, rawMainVocal: leadRaw.url },
+        });
+      }
+
+      const backStatus = await mvsepGetSeparation(current.hashes.denoiseBack);
+      if (backStatus.status === "failed" || backStatus.status === "not_found") {
+        return saveState(args.userId, failState(current, backStatus.message || "Back vocal denoise failed."));
+      }
+      if (WAITING_STATUSES.has(backStatus.status)) {
+        return saveState(args.userId, {
+          ...current,
+          status: "running",
+          progress: Math.max(current.progress, 92),
+          message: "Applying denoise (back vocal)...",
+          urls: { ...current.urls, rawMainVocal: leadRaw.url },
+        });
+      }
+
       const backRaw = vocalLikeFile(backStatus.files);
-      if (!leadRaw || !backRaw) {
-        return saveState(args.userId, failState(current, "Could not identify denoised vocals."));
+      if (!backRaw) {
+        return saveState(args.userId, failState(current, "Could not identify denoised back vocal."));
       }
 
       return saveState(args.userId, {
         ...current,
         status: "running",
         stage: "upload_outputs",
-        progress: 92,
+        progress: 94,
         message: "Saving stems to your library...",
         urls: {
           ...current.urls,
