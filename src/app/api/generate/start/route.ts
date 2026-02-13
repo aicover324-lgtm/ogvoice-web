@@ -13,7 +13,8 @@ const schema = z.object({
   inputAssetId: z.string().min(1),
   pitch: z.number().int().min(-24).max(24).default(0),
   searchFeatureRatio: z.number().min(0).max(1).default(0.75),
-  inferBackingVocals: z.boolean().default(false),
+  addBackVocals: z.boolean().default(false),
+  backingVocalMode: z.enum(["do_not_convert", "convert"]).default("do_not_convert"),
 });
 
 export async function POST(req: Request) {
@@ -73,7 +74,8 @@ export async function POST(req: Request) {
   const config = buildCoverPipelineConfig({
     pitch: parsed.data.pitch,
     searchFeatureRatio: parsed.data.searchFeatureRatio,
-    inferBackingVocals: parsed.data.inferBackingVocals,
+    addBackVocals: parsed.data.addBackVocals,
+    convertBackVocals: parsed.data.addBackVocals && parsed.data.backingVocalMode === "convert",
   });
 
   try {

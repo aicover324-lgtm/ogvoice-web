@@ -34,6 +34,7 @@ export async function POST(req: Request) {
 
   const data = parsed.data;
   const rvc = asRecord(asRecord(data.config)?.rvc);
+  const audioSeparation = asRecord(asRecord(data.config)?.audioSeparation);
   const postProcess = asRecord(asRecord(data.config)?.postProcess);
 
   const pitch = clampInt(asNumber(rvc?.pitch, 0), -24, 24);
@@ -42,6 +43,9 @@ export async function POST(req: Request) {
   const protect = clamp(asNumber(rvc?.protectVoicelessConsonants, 0.33), 0, 0.5);
   const f0Method = asNonEmptyString(rvc?.pitchExtractor, "rmvpe");
   const embedderModel = asNonEmptyString(rvc?.embedderModel, "contentvec");
+  const addBackVocals = asBoolean(audioSeparation?.addBackVocals, false);
+  const backVocalMode = asNonEmptyString(audioSeparation?.backVocalMode, "do_not_convert");
+  const convertBackVocals = addBackVocals && backVocalMode === "convert";
 
   const requestedFormat = asNonEmptyString(postProcess?.exportFormat, "WAV").toUpperCase();
   const exportFormat = allowedExportFormats.has(requestedFormat) ? requestedFormat : "WAV";
@@ -62,6 +66,9 @@ export async function POST(req: Request) {
       f0Method,
       embedderModel,
       exportFormat,
+      addBackVocals,
+      convertBackVocals,
+      mixWithInput: true,
     });
 
     return NextResponse.json({

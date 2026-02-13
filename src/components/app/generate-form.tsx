@@ -98,7 +98,8 @@ export function GenerateForm({
   const [inputFileName, setInputFileName] = React.useState<string | null>(null);
   const [pitch, setPitch] = React.useState(0);
   const [searchFeatureRatio, setSearchFeatureRatio] = React.useState(0.75);
-  const [inferBackingVocals, setInferBackingVocals] = React.useState(false);
+  const [addBackVocals, setAddBackVocals] = React.useState(false);
+  const [backVocalMode, setBackVocalMode] = React.useState<"do_not_convert" | "convert">("do_not_convert");
   const [jobId, setJobId] = React.useState<string | null>(null);
   const [job, setJob] = React.useState<GenJob | null>(null);
   const [queue, setQueue] = React.useState<QueueItem[]>(initialQueue);
@@ -191,7 +192,8 @@ export function GenerateForm({
         inputAssetId,
         pitch,
         searchFeatureRatio,
-        inferBackingVocals,
+        addBackVocals,
+        backingVocalMode: backVocalMode,
       }),
     });
     const json = await res.json().catch(() => null);
@@ -765,17 +767,59 @@ export function GenerateForm({
               <label className="flex cursor-pointer items-start gap-2.5">
                 <input
                   type="checkbox"
-                  checked={inferBackingVocals}
-                  onChange={(e) => setInferBackingVocals(e.target.checked)}
+                  checked={addBackVocals}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setAddBackVocals(checked);
+                    if (!checked) setBackVocalMode("do_not_convert");
+                  }}
                   className="mt-0.5 h-4 w-4 cursor-pointer rounded border-white/30 bg-transparent accent-cyan-400"
                 />
                 <span>
-                  <span className="block text-sm font-semibold">Infer Backing Vocals</span>
+                  <span className="block text-sm font-semibold">Add back vocals to the song?</span>
                   <span className="mt-0.5 block text-xs text-slate-400">
-                    If enabled, separated back vocals are also converted with the cloned voice.
+                    Adds back vocal layer into the final cover mix.
                   </span>
                 </span>
               </label>
+
+              {addBackVocals ? (
+                <div className="mt-3 space-y-2 rounded-lg border border-white/10 bg-[#0f1730] p-3">
+                  <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-cyan-300/35 bg-cyan-400/10 p-2.5">
+                    <input
+                      type="radio"
+                      name="back-vocal-mode"
+                      checked={backVocalMode === "do_not_convert"}
+                      onChange={() => setBackVocalMode("do_not_convert")}
+                      className="mt-0.5 h-4 w-4 cursor-pointer accent-cyan-400"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-cyan-100">
+                        Do not convert back vocals <span className="ml-2 rounded-full border border-cyan-300/40 px-2 py-0.5 text-[10px] uppercase tracking-[0.08em]">Recommended</span>
+                      </span>
+                      <span className="mt-1 block text-xs text-cyan-200/90">
+                        Back vocals are generally quieter than main vocals and can introduce artifacts when converted. Keeping them unconverted usually gives cleaner results.
+                      </span>
+                    </span>
+                  </label>
+
+                  <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-white/15 bg-white/5 p-2.5">
+                    <input
+                      type="radio"
+                      name="back-vocal-mode"
+                      checked={backVocalMode === "convert"}
+                      onChange={() => setBackVocalMode("convert")}
+                      className="mt-0.5 h-4 w-4 cursor-pointer accent-cyan-400"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold">Convert back vocals</span>
+                      <span className="mt-1 block text-xs text-slate-400">
+                        Back vocals are also converted with your cloned voice.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              ) : null}
             </div>
 
             <div className="mt-6 flex items-center justify-end gap-3 pt-5">

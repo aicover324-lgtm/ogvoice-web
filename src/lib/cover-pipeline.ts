@@ -28,16 +28,19 @@ export const COVER_POST_PROCESS_DEFAULTS = {
 export function buildCoverPipelineConfig(args: {
   pitch: number;
   searchFeatureRatio: number;
-  inferBackingVocals: boolean;
+  addBackVocals: boolean;
+  convertBackVocals: boolean;
 }) {
   return {
     rvc: {
-      inferBackingVocals: args.inferBackingVocals,
+      inferBackingVocals: args.convertBackVocals,
       pitch: args.pitch,
       searchFeatureRatio: args.searchFeatureRatio,
       ...COVER_RVC_HIDDEN_DEFAULTS,
     },
     audioSeparation: {
+      addBackVocals: args.addBackVocals,
+      backVocalMode: args.convertBackVocals ? "convert" : "do_not_convert",
       ...COVER_AUDIO_SEPARATION_DEFAULTS,
     },
     postProcess: {
