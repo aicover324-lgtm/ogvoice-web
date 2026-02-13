@@ -233,37 +233,116 @@ export function GenerateForm({
   React.useEffect(() => {
     if (!jobId) return;
     let alive = true;
+    let timer: number | null = null;
+    let failedPollCount = 0;
+    let polling = false;
     const id = jobId;
 
-    async function poll() {
-      const res = await fetch(`/api/generate/status?jobId=${encodeURIComponent(id)}`, { cache: "no-store" });
-      const json = await res.json().catch(() => null);
-      if (!alive || !res.ok || !json?.ok) return;
-
-      const next = json.data.job as GenJob;
-      if (!next) return;
-      setJob(next);
-      setStemPreview(next.stemPreview || null);
-      setQueue((prev) =>
-        prev.map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                status: next.status,
-                progress: next.progress,
-                errorMessage: next.errorMessage,
-                outputAssetId: next.outputAssetId,
-              }
-            : item
-        )
-      );
+    function clearPollTimer() {
+      if (timer !== null) {
+        window.clearTimeout(timer);
+        timer = null;
+      }
     }
 
-    void poll();
-    const t = setInterval(() => void poll(), 2000);
+    function computeNextDelay(status?: GenJob["status"]) {
+      if (failedPollCount > 0) {
+        const exp = Math.min(failedPollCount, 4);
+        return Math.min(20000, 1500 * 2 ** exp);
+      }
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return 6000;
+      }
+      if (status === "queued") return 2500;
+      if (status === "running") return 2000;
+      return 2500;
+    }
+
+    function scheduleNextPoll(delayMs: number) {
+      if (!alive) return;
+      clearPollTimer();
+      timer = window.setTimeout(() => {
+        void poll();
+      }, delayMs);
+    }
+
+    async function poll(force = false) {
+      if (!alive) return;
+      if (polling) return;
+      if (!force && typeof document !== "undefined" && document.visibilityState === "hidden") {
+        scheduleNextPoll(computeNextDelay());
+        return;
+      }
+
+      polling = true;
+      try {
+        const res = await fetch(`/api/generate/status?jobId=${encodeURIComponent(id)}`, { cache: "no-store" });
+        const json = await res.json().catch(() => null);
+        if (!alive) return;
+        if (!res.ok || !json?.ok) {
+          failedPollCount += 1;
+          scheduleNextPoll(computeNextDelay());
+          return;
+        }
+
+        failedPollCount = 0;
+        const next = json.data.job as GenJob;
+        if (!next) {
+          scheduleNextPoll(computeNextDelay());
+          return;
+        }
+
+        setJob(next);
+        setStemPreview(next.stemPreview || null);
+        setQueue((prev) =>
+          prev.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  status: next.status,
+                  progress: next.progress,
+                  errorMessage: next.errorMessage,
+                  outputAssetId: next.outputAssetId,
+                }
+              : item
+          )
+        );
+
+        if (isTerminalJobStatus(next.status)) {
+          clearPollTimer();
+          return;
+        }
+
+        scheduleNextPoll(computeNextDelay(next.status));
+      } catch {
+        if (!alive) return;
+        failedPollCount += 1;
+        scheduleNextPoll(computeNextDelay());
+      } finally {
+        polling = false;
+      }
+    }
+
+    function onAppVisible() {
+      if (!alive) return;
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      void poll(true);
+    }
+
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onAppVisible);
+    }
+    window.addEventListener("focus", onAppVisible);
+
+    void poll(true);
+
     return () => {
       alive = false;
-      clearInterval(t);
+      clearPollTimer();
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onAppVisible);
+      }
+      window.removeEventListener("focus", onAppVisible);
     };
   }, [jobId]);
 
@@ -1004,6 +1083,10 @@ function recordingExtForMime(mime: string) {
   if (lower.includes("ogg")) return "ogg";
   if (lower.includes("mp4") || lower.includes("m4a")) return "m4a";
   return "webm";
+}
+
+function isTerminalJobStatus(status: GenJob["status"] | null | undefined) {
+  return status === "succeeded" || status === "failed";
 }
 
 async function buildRecordingUploadFile(blob: Blob, mimeType: string) {

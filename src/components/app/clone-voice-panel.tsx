@@ -87,8 +87,30 @@ export function CloneVoicePanel({
   React.useEffect(() => {
     if (!jobId) return;
     if (status === "succeeded" || status === "failed") return;
-    const t = setInterval(() => void refresh(jobId), 5000);
-    return () => clearInterval(t);
+
+    const poll = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      void refresh(jobId);
+    };
+
+    const onAppVisible = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      void refresh(jobId);
+    };
+
+    const t = setInterval(poll, 5000);
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onAppVisible);
+    }
+    window.addEventListener("focus", onAppVisible);
+
+    return () => {
+      clearInterval(t);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onAppVisible);
+      }
+      window.removeEventListener("focus", onAppVisible);
+    };
   }, [jobId, refresh, status]);
 
   const inFlight = starting || status === "running" || status === "queued";

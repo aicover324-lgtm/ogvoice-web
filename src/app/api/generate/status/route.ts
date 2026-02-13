@@ -71,27 +71,33 @@ export async function GET(req: Request) {
   }
 
   let stemPreview: StemPreview | null = null;
+  const jobProgress = job.progress || 0;
+  let jobMutated = false;
 
   try {
     const isCoverJob = job.runpodRequestId.startsWith("cover:");
     if (isCoverJob) {
       const requestId = job.runpodRequestId.slice("cover:".length);
       const st = await pollCoverEngineJob(requestId);
-      stemPreview = await buildStemPreviewUrls(st.stemKeys, session.user.id);
       const status = normalizeCoverStatus(st.status);
 
       if (COVER_SUCCESS_STATUSES.has(status)) {
+        stemPreview = await buildStemPreviewUrls(st.stemKeys, session.user.id);
         const outputKey = st.outputKey || job.outputKey;
         const outputBytes = st.outputBytes;
+        const missingOutputMessage = "Cover completed but output file is missing.";
 
         if (!outputKey) {
-          await prisma.generationJob.update({
-            where: { id: job.id },
-            data: {
-              status: "failed",
-              errorMessage: "Cover completed but output file is missing.",
-            },
-          });
+          if (job.status !== "failed" || job.errorMessage !== missingOutputMessage) {
+            await prisma.generationJob.update({
+              where: { id: job.id },
+              data: {
+                status: "failed",
+                errorMessage: missingOutputMessage,
+              },
+            });
+            jobMutated = true;
+          }
         } else if (!job.outputAssetId) {
           const fileName = `${canonicalVoiceAssetBaseName(job.voiceProfile.name)}-cover.wav`;
           const created = await prisma.uploadAsset.create({
@@ -117,27 +123,41 @@ export async function GET(req: Request) {
               errorMessage: null,
             },
           });
+          jobMutated = true;
         } else {
-          await prisma.generationJob.update({
-            where: { id: job.id },
-            data: {
-              status: "succeeded",
-              progress: 100,
-              outputKey,
-              errorMessage: null,
-            },
-          });
+          const shouldSyncSuccessState =
+            job.status !== "succeeded" ||
+            job.progress !== 100 ||
+            job.outputKey !== outputKey ||
+            job.errorMessage !== null;
+
+          if (shouldSyncSuccessState) {
+            await prisma.generationJob.update({
+              where: { id: job.id },
+              data: {
+                status: "succeeded",
+                progress: 100,
+                outputKey,
+                errorMessage: null,
+              },
+            });
+            jobMutated = true;
+          }
         }
       } else if (COVER_FAILURE_STATUSES.has(status)) {
         const msg = toUserFacingCoverFailure({ status, error: st.errorMessage });
-        await prisma.generationJob.update({
-          where: { id: job.id },
-          data: {
-            status: "failed",
-            errorMessage: msg,
-          },
-        });
-        if (job.outputKey) {
+        const shouldMarkFailed = job.status !== "failed" || job.errorMessage !== msg;
+        if (shouldMarkFailed) {
+          await prisma.generationJob.update({
+            where: { id: job.id },
+            data: {
+              status: "failed",
+              errorMessage: msg,
+            },
+          });
+          jobMutated = true;
+        }
+        if (job.outputKey && shouldMarkFailed) {
           try {
             await deleteObjects([job.outputKey]);
           } catch {
@@ -153,21 +173,26 @@ export async function GET(req: Request) {
               : COVER_RUNNING_STATUSES.has(status)
                 ? 60
                 : 25;
-        await prisma.generationJob.update({
-          where: { id: job.id },
-          data: {
-            status: COVER_QUEUED_STATUSES.has(status) ? "queued" : "running",
-            progress: Math.max(job.progress || 0, normalizedProgress),
-          },
-        });
+        const nextStatus = COVER_QUEUED_STATUSES.has(status) ? "queued" : "running";
+        const nextProgress = Math.max(jobProgress, normalizedProgress);
+        if (job.status !== nextStatus || jobProgress !== nextProgress) {
+          await prisma.generationJob.update({
+            where: { id: job.id },
+            data: {
+              status: nextStatus,
+              progress: nextProgress,
+            },
+          });
+          jobMutated = true;
+        }
       }
     } else {
       const st = await runpodStatus(job.runpodRequestId);
       const status = String(st.status || "").toUpperCase();
       const out = st.output && typeof st.output === "object" ? (st.output as Record<string, unknown>) : null;
-      stemPreview = await buildStemPreviewUrls(extractStemKeys(out), session.user.id);
 
       if (status === "COMPLETED") {
+        stemPreview = await buildStemPreviewUrls(extractStemKeys(out), session.user.id);
         const outputKey =
           out && typeof out.outputKey === "string"
             ? out.outputKey
@@ -175,15 +200,19 @@ export async function GET(req: Request) {
               ? out.outKey
               : job.outputKey;
         const outputBytes = out && typeof out.outputBytes === "number" ? out.outputBytes : null;
+        const missingOutputMessage = "Conversion completed but output file is missing.";
 
         if (!outputKey) {
-          await prisma.generationJob.update({
-            where: { id: job.id },
-            data: {
-              status: "failed",
-              errorMessage: "Conversion completed but output file is missing.",
-            },
-          });
+          if (job.status !== "failed" || job.errorMessage !== missingOutputMessage) {
+            await prisma.generationJob.update({
+              where: { id: job.id },
+              data: {
+                status: "failed",
+                errorMessage: missingOutputMessage,
+              },
+            });
+            jobMutated = true;
+          }
         } else if (!job.outputAssetId) {
           const fileName = `${canonicalVoiceAssetBaseName(job.voiceProfile.name)}-converted.wav`;
           const created = await prisma.uploadAsset.create({
@@ -209,27 +238,41 @@ export async function GET(req: Request) {
               errorMessage: null,
             },
           });
+          jobMutated = true;
         } else {
-          await prisma.generationJob.update({
-            where: { id: job.id },
-            data: {
-              status: "succeeded",
-              progress: 100,
-              outputKey,
-              errorMessage: null,
-            },
-          });
+          const shouldSyncSuccessState =
+            job.status !== "succeeded" ||
+            job.progress !== 100 ||
+            job.outputKey !== outputKey ||
+            job.errorMessage !== null;
+
+          if (shouldSyncSuccessState) {
+            await prisma.generationJob.update({
+              where: { id: job.id },
+              data: {
+                status: "succeeded",
+                progress: 100,
+                outputKey,
+                errorMessage: null,
+              },
+            });
+            jobMutated = true;
+          }
         }
       } else if (TERMINAL_FAILURE_STATUSES.has(status)) {
         const msg = toUserFacingFailure({ status, error: st.error });
-        await prisma.generationJob.update({
-          where: { id: job.id },
-          data: {
-            status: "failed",
-            errorMessage: msg,
-          },
-        });
-        if (job.outputKey) {
+        const shouldMarkFailed = job.status !== "failed" || job.errorMessage !== msg;
+        if (shouldMarkFailed) {
+          await prisma.generationJob.update({
+            where: { id: job.id },
+            data: {
+              status: "failed",
+              errorMessage: msg,
+            },
+          });
+          jobMutated = true;
+        }
+        if (job.outputKey && shouldMarkFailed) {
           try {
             await deleteObjects([job.outputKey]);
           } catch {
@@ -238,17 +281,37 @@ export async function GET(req: Request) {
         }
       } else {
         const nextProgress = QUEUED_STATUSES.has(status) ? 10 : RUNNING_STATUSES.has(status) ? 55 : 25;
-        await prisma.generationJob.update({
-          where: { id: job.id },
-          data: {
-            status: QUEUED_STATUSES.has(status) ? "queued" : "running",
-            progress: Math.max(job.progress || 0, nextProgress),
-          },
-        });
+        const nextStatus = QUEUED_STATUSES.has(status) ? "queued" : "running";
+        const mergedProgress = Math.max(jobProgress, nextProgress);
+        if (job.status !== nextStatus || jobProgress !== mergedProgress) {
+          await prisma.generationJob.update({
+            where: { id: job.id },
+            data: {
+              status: nextStatus,
+              progress: mergedProgress,
+            },
+          });
+          jobMutated = true;
+        }
       }
     }
   } catch {
     // Keep endpoint resilient if provider status call fails.
+  }
+
+  if (!jobMutated) {
+    return ok({
+      job: {
+        id: job.id,
+        status: job.status,
+        progress: job.progress,
+        errorMessage: job.errorMessage,
+        outputAssetId: job.outputAssetId,
+        createdAt: job.createdAt,
+        updatedAt: job.updatedAt,
+        stemPreview,
+      },
+    });
   }
 
   const refreshed = await prisma.generationJob.findFirst({
