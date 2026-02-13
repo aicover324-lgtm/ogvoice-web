@@ -28,6 +28,7 @@ const allowedImageMime = new Set([
 ]);
 
 const datasetAllowedMime = new Set(["audio/wav", "audio/x-wav"]);
+const DATASET_HARD_MAX_BYTES = 100 * 1024 * 1024;
 
 const schema = z.object({
   voiceProfileId: z.string().min(1).optional(),
@@ -107,9 +108,10 @@ export async function POST(req: Request) {
 
   if (type === "dataset_audio") {
     // Plan quota check for dataset
-    const datasetMax = plan === "pro" ? env.UPLOAD_MAX_DATASET_BYTES_PRO : env.UPLOAD_MAX_DATASET_BYTES_FREE;
+    const datasetPlanMax = plan === "pro" ? env.UPLOAD_MAX_DATASET_BYTES_PRO : env.UPLOAD_MAX_DATASET_BYTES_FREE;
+    const datasetMax = Math.min(datasetPlanMax, DATASET_HARD_MAX_BYTES);
     if (fileSize > datasetMax) {
-      return err("QUOTA_EXCEEDED", "Dataset quota exceeded", 403, {
+      return err("FILE_TOO_LARGE", "Dataset max size is 100 MB", 413, {
         plan,
         maxBytes: datasetMax,
         attemptedBytes: fileSize,

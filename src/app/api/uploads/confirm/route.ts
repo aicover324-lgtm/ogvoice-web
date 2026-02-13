@@ -28,6 +28,7 @@ const datasetAllowedMime = new Set(["audio/wav", "audio/x-wav"]);
 const imageAllowedMime = new Set(["image/jpeg", "image/png", "image/webp"]);
 const TARGET_DATASET_SAMPLE_RATE = 32000;
 const TARGET_DATASET_CHANNELS = 1;
+const DATASET_HARD_MAX_BYTES = 100 * 1024 * 1024;
 const require = createRequire(import.meta.url);
 
 export async function POST(req: Request) {
@@ -58,6 +59,11 @@ export async function POST(req: Request) {
     const lower = fileName.toLowerCase();
     if (!datasetAllowedMime.has(mimeType) || !lower.endsWith(".wav")) {
       return err("UNSUPPORTED_TYPE", "Dataset must be a .wav file", 415);
+    }
+    if (fileSize > DATASET_HARD_MAX_BYTES) {
+      return err("FILE_TOO_LARGE", "Dataset max size is 100 MB", 413, {
+        maxBytes: DATASET_HARD_MAX_BYTES,
+      });
     }
   }
 

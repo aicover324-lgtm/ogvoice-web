@@ -224,7 +224,7 @@ export function DraftDatasetUploaderWithReplace({
             <div className="text-sm text-slate-300">
               Drag and drop your singing recording here, or click to choose.
             </div>
-            <div className="text-xs text-slate-400">Allowed: WAV only, 10-20 minutes</div>
+            <div className="text-xs text-slate-400">Allowed: WAV only, max 100 MB, 10-20 minutes</div>
             <div className="mt-3 inline-flex w-fit items-center rounded-full border border-white/20 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-200">
               <Repeat2 className="mr-2 h-3.5 w-3.5" />
               {locked ? "Choose new file" : "Choose file"}

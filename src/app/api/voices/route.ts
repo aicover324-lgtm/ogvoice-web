@@ -1,14 +1,12 @@
 import { z } from "zod";
 import { getServerSession } from "next-auth";
+import { Prisma } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { err, ok } from "@/lib/api-response";
-import { copyObject, deleteObjects } from "@/lib/storage/s3";
 import {
   canonicalImageExtension,
   canonicalVoiceAssetBaseName,
-  voiceCoverImageKey,
-  voiceDatasetWavKey,
 } from "@/lib/storage/keys";
 
 export async function GET() {
@@ -43,10 +41,6 @@ export async function POST(req: Request) {
   if (!parsed.success) return err("INVALID_INPUT", "Invalid voice profile payload", 400, parsed.error.flatten());
 
   let voice: { id: string };
-  let draftDatasetKeyToDelete: string | null = null;
-  let copiedDatasetKeyToRollback: string | null = null;
-  let draftCoverKeyToDelete: string | null = null;
-  let copiedCoverKeyToRollback: string | null = null;
   try {
     voice = await prisma.$transaction(async (db) => {
       const created = await db.voiceProfile.create({
@@ -59,7 +53,6 @@ export async function POST(req: Request) {
       });
 
       let coverId: string | null = null;
-      let coverStorageKey: string | null = null;
       let coverFileName: string | null = null;
       let coverMimeType: string | null = null;
       if (parsed.data.coverAssetId) {
@@ -70,13 +63,12 @@ export async function POST(req: Request) {
             type: "voice_cover_image",
             voiceProfileId: null,
           },
-          select: { id: true, storageKey: true, fileName: true, mimeType: true },
+          select: { id: true, fileName: true, mimeType: true },
         });
         if (!cover) {
           throw new Error("COVER_ASSET_INVALID");
         }
         coverId = cover.id;
-        coverStorageKey = cover.storageKey;
         coverFileName = cover.fileName;
         coverMimeType = cover.mimeType;
       }
@@ -95,25 +87,11 @@ export async function POST(req: Request) {
           throw new Error("DATASET_ASSET_INVALID");
         }
 
-        const datasetStorageKey = voiceDatasetWavKey({
-          userId: session.user.id,
-          voiceProfileId: created.id,
-          voiceName: parsed.data.name,
-        });
-        const datasetFileName = `${canonicalVoiceAssetBaseName(parsed.data.name)}.wav`;
-
-        if (asset.storageKey !== datasetStorageKey) {
-          await copyObject({ fromKey: asset.storageKey, toKey: datasetStorageKey });
-          copiedDatasetKeyToRollback = datasetStorageKey;
-          draftDatasetKeyToDelete = asset.storageKey;
-        }
-
         await db.uploadAsset.update({
           where: { id: asset.id },
           data: {
             voiceProfileId: created.id,
-            storageKey: datasetStorageKey,
-            fileName: datasetFileName,
+            fileName: `${canonicalVoiceAssetBaseName(parsed.data.name)}.wav`,
           },
         });
       } else {
@@ -123,62 +101,36 @@ export async function POST(req: Request) {
 
       if (coverId) {
         const coverExt = canonicalImageExtension({ fileName: coverFileName, mimeType: coverMimeType });
-        const coverStorageNamedKey = voiceCoverImageKey({
-          userId: session.user.id,
-          voiceProfileId: created.id,
-          voiceName: parsed.data.name,
-          extension: coverExt,
-        });
         const coverFileNamed = `${canonicalVoiceAssetBaseName(parsed.data.name)}.${coverExt}`;
-
-        if (coverStorageKey && coverStorageKey !== coverStorageNamedKey) {
-          await copyObject({ fromKey: coverStorageKey, toKey: coverStorageNamedKey });
-          copiedCoverKeyToRollback = coverStorageNamedKey;
-          draftCoverKeyToDelete = coverStorageKey;
-        }
 
         await db.uploadAsset.update({
           where: { id: coverId },
           data: {
             voiceProfileId: created.id,
-            storageKey: coverStorageNamedKey,
             fileName: coverFileNamed,
           },
         });
       }
       return created;
+    }, {
+      maxWait: 15_000,
+      timeout: 120_000,
     });
-    copiedDatasetKeyToRollback = null;
-    copiedCoverKeyToRollback = null;
   } catch (e) {
-    const rollbackKeys: string[] = [];
-    if (copiedDatasetKeyToRollback) rollbackKeys.push(copiedDatasetKeyToRollback);
-    if (copiedCoverKeyToRollback) rollbackKeys.push(copiedCoverKeyToRollback);
-    if (rollbackKeys.length > 0) {
-      try {
-        await deleteObjects(rollbackKeys);
-      } catch {
-        // Ignore rollback cleanup errors.
-      }
-    }
     if (e instanceof Error && e.message === "DATASET_ASSET_INVALID") {
       return err("DATASET_REQUIRED", "Upload a dataset file before creating this voice.", 409);
     }
     if (e instanceof Error && e.message === "COVER_ASSET_INVALID") {
       return err("COVER_INVALID", "Cover image could not be attached. Try uploading it again.", 409);
     }
-    return err("INTERNAL", "Could not create voice.", 500);
-  }
-
-  const postCommitCleanupKeys: string[] = [];
-  if (draftDatasetKeyToDelete) postCommitCleanupKeys.push(draftDatasetKeyToDelete);
-  if (draftCoverKeyToDelete) postCommitCleanupKeys.push(draftCoverKeyToDelete);
-  if (postCommitCleanupKeys.length > 0) {
-    try {
-      await deleteObjects(postCommitCleanupKeys);
-    } catch {
-      // Ignore cleanup errors. Old draft objects are harmless.
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2028") {
+      return err(
+        "CREATE_VOICE_TIMEOUT",
+        "Dataset is large and processing took too long. Please click Create Voice again.",
+        503
+      );
     }
+    return err("INTERNAL", "Could not create voice.", 500);
   }
 
   await prisma.auditLog.create({

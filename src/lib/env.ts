@@ -44,8 +44,8 @@ const serverSchema = z.object({
 
   UPLOAD_MAX_FILE_BYTES_FREE: z.coerce.number().int().positive().default(104857600),
   UPLOAD_MAX_FILE_BYTES_PRO: z.coerce.number().int().positive().default(524288000),
-  UPLOAD_MAX_DATASET_BYTES_FREE: z.coerce.number().int().positive().default(524288000),
-  UPLOAD_MAX_DATASET_BYTES_PRO: z.coerce.number().int().positive().default(5368709120),
+  UPLOAD_MAX_DATASET_BYTES_FREE: z.coerce.number().int().positive().default(104857600),
+  UPLOAD_MAX_DATASET_BYTES_PRO: z.coerce.number().int().positive().default(104857600),
 
   // Image uploads (bytes)
   UPLOAD_MAX_IMAGE_BYTES: z.coerce.number().int().positive().default(10485760),
