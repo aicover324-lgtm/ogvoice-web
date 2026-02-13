@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Image as ImageIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function VoiceCoverThumb({
   voiceId,
@@ -26,10 +27,10 @@ export function VoiceCoverThumb({
 
   return (
     <div
-      className={
-        className ||
-        "group relative grid place-items-center overflow-hidden rounded-2xl border bg-muted shadow-sm"
-      }
+      className={cn(
+        "group relative grid place-items-center overflow-hidden rounded-2xl border bg-muted shadow-sm",
+        className
+      )}
       style={{ width: size, height: size }}
       role="img"
       aria-label="Voice cover"
