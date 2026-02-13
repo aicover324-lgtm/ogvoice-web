@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { spawn } from "node:child_process";
 import { promises as fs } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import ffmpegPath from "ffmpeg-static";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -28,7 +28,7 @@ const datasetAllowedMime = new Set(["audio/wav", "audio/x-wav"]);
 const imageAllowedMime = new Set(["image/jpeg", "image/png", "image/webp"]);
 const TARGET_DATASET_SAMPLE_RATE = 32000;
 const TARGET_DATASET_CHANNELS = 1;
-const FFMPEG_BINARY = resolveFfmpegBinary();
+const require = createRequire(import.meta.url);
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -142,7 +142,26 @@ export async function POST(req: Request) {
   if (type === "dataset_audio") {
     try {
       const uploaded = await getObjectBytes({ key: storageKey, maxBytes: fileSize + 1024 * 1024 });
-      const optimized = await optimizeDatasetWav(uploaded);
+      const optimized = await optimizeDatasetWav(uploaded).catch(async (e) => {
+        if (!isFfmpegUnavailableError(e)) throw e;
+
+        try {
+          await prisma.auditLog.create({
+            data: {
+              userId: session.user.id,
+              action: "dataset.optimize.skipped",
+              meta: {
+                storageKey,
+                reason: e instanceof Error ? e.message : "ffmpeg unavailable",
+              },
+            },
+          });
+        } catch {
+          // Ignore audit failures.
+        }
+
+        return uploaded;
+      });
       await putObjectBytes({
         key: storageKey,
         bytes: optimized,
@@ -356,21 +375,63 @@ async function optimizeDatasetWav(input: Buffer) {
 }
 
 async function runFfmpeg(args: string[]) {
+  const candidates = ffmpegBinaryCandidates();
+  let lastError: Error | null = null;
+
+  for (const bin of candidates) {
+    try {
+      await runFfmpegOnce(bin, args);
+      return;
+    } catch (e) {
+      if (isSpawnEnoent(e)) {
+        lastError = new Error(`ffmpeg binary not found at '${bin}'`);
+        continue;
+      }
+      throw e;
+    }
+  }
+
+  throw markFfmpegUnavailable(
+    lastError || new Error("ffmpeg binary is unavailable in this runtime.")
+  );
+}
+
+function ffmpegBinaryCandidates() {
+  const out: string[] = [];
+
+  const fromEnv = process.env.FFMPEG_PATH?.trim();
+  if (fromEnv) out.push(fromEnv);
+
+  const fromBinEnv = process.env.FFMPEG_BIN?.trim();
+  if (fromBinEnv) out.push(fromBinEnv);
+
+  const staticPath = resolveFfmpegStaticBinaryPath();
+  if (staticPath) out.push(staticPath);
+
+  out.push("ffmpeg");
+  return Array.from(new Set(out));
+}
+
+function resolveFfmpegStaticBinaryPath() {
+  try {
+    const pkgPath = require.resolve("ffmpeg-static/package.json");
+    const exe = process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg";
+    return path.join(path.dirname(pkgPath), exe);
+  } catch {
+    return null;
+  }
+}
+
+async function runFfmpegOnce(binary: string, args: string[]) {
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(FFMPEG_BINARY, args, { stdio: ["ignore", "ignore", "pipe"] });
+    const child = spawn(binary, args, { stdio: ["ignore", "ignore", "pipe"] });
     let stderr = "";
 
     child.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
     });
 
-    child.on("error", (e) => {
-      if ((e as NodeJS.ErrnoException).code === "ENOENT") {
-        reject(new Error(`ffmpeg binary not found at '${FFMPEG_BINARY}'`));
-        return;
-      }
-      reject(new Error(`ffmpeg launch failed: ${e.message}`));
-    });
+    child.on("error", (e) => reject(e));
     child.on("close", (code) => {
       if (code === 0) {
         resolve();
@@ -382,13 +443,19 @@ async function runFfmpeg(args: string[]) {
   });
 }
 
-function resolveFfmpegBinary() {
-  const fromEnv = process.env.FFMPEG_PATH?.trim();
-  if (fromEnv) return fromEnv;
+function isSpawnEnoent(err: unknown) {
+  return !!(err && typeof err === "object" && "code" in err && (err as NodeJS.ErrnoException).code === "ENOENT");
+}
 
-  if (typeof ffmpegPath === "string" && ffmpegPath.trim()) {
-    return ffmpegPath;
-  }
+function markFfmpegUnavailable(err: Error) {
+  (err as Error & { code?: string }).code = "FFMPEG_UNAVAILABLE";
+  return err;
+}
 
-  return "ffmpeg";
+function isFfmpegUnavailableError(err: unknown) {
+  if (!err || typeof err !== "object") return false;
+  const code = (err as { code?: string }).code;
+  if (code === "FFMPEG_UNAVAILABLE") return true;
+  const msg = err instanceof Error ? err.message.toLowerCase() : "";
+  return msg.includes("ffmpeg binary not found") || msg.includes("ffmpeg unavailable");
 }
