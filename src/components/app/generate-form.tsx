@@ -819,22 +819,24 @@ export function GenerateForm({
               </Badge>
             </div>
 
-            <div className="mt-3 flex justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer disabled:pointer-events-auto disabled:cursor-not-allowed"
-                disabled={uploadBusy}
-                onClick={() => {
-                  uploaderRef.current?.openPicker();
-                }}
-              >
-                Replace file
-              </Button>
-            </div>
-
             {inputPreviewUrl ? <CustomAudioPlayer src={inputPreviewUrl} preload="metadata" variant="compact" className="mt-3 w-full" /> : null}
+          </div>
+        ) : null}
+
+        {uploadState.fileName ? (
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer disabled:pointer-events-auto disabled:cursor-not-allowed"
+              disabled={uploadBusy}
+              onClick={() => {
+                uploaderRef.current?.openPicker();
+              }}
+            >
+              Replace file
+            </Button>
           </div>
         ) : null}
         </div>
