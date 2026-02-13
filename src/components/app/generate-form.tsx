@@ -41,6 +41,27 @@ type UploadPanelState = {
   error: string | null;
 };
 
+type StemJob = {
+  id: string;
+  status: "queued" | "running" | "succeeded" | "failed";
+  stage: string;
+  progress: number;
+  message: string;
+  errorMessage?: string | null;
+  outputs?: {
+    rawMainVocalAssetId?: string | null;
+    rawBackVocalAssetId?: string | null;
+    instrumentalAssetId?: string | null;
+  };
+};
+
+type StemOutputPreview = {
+  assetId: string;
+  title: string;
+  fileName: string;
+  url: string;
+};
+
 const AUDIO_ALLOWED_MIME = new Set([
   "audio/wav",
   "audio/x-wav",
@@ -121,6 +142,10 @@ export function GenerateForm({
   const [recording, setRecording] = React.useState(false);
   const [recordingStarting, setRecordingStarting] = React.useState(false);
   const [recordingElapsedSec, setRecordingElapsedSec] = React.useState(0);
+  const [stemJobId, setStemJobId] = React.useState<string | null>(null);
+  const [stemJob, setStemJob] = React.useState<StemJob | null>(null);
+  const [stemStarting, setStemStarting] = React.useState(false);
+  const [stemPreviews, setStemPreviews] = React.useState<StemOutputPreview[]>([]);
 
   const uploaderRef = React.useRef<DatasetUploaderHandle | null>(null);
   const localPreviewUrlRef = React.useRef<string | null>(null);
@@ -130,6 +155,7 @@ export function GenerateForm({
   const recordingTimerRef = React.useRef<number | null>(null);
   const queueItemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const lastOutputAssetIdRef = React.useRef<string | null>(null);
+  const stemLoadedJobIdRef = React.useRef<string | null>(null);
 
   const selectedVoice = React.useMemo(() => voices.find((v) => v.id === voiceProfileId) || null, [voiceProfileId, voices]);
   const uploadBusy =
@@ -285,6 +311,108 @@ export function GenerateForm({
       setLoadingOutput(false);
     }
   }, []);
+
+  const fetchAssetPreview = React.useCallback(async (assetId: string) => {
+    const res = await fetch(`/api/assets/${encodeURIComponent(assetId)}?json=1`, { cache: "no-store" });
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json?.ok) {
+      throw new Error(json?.error?.message || "Could not load audio file.");
+    }
+    return json.data as { url: string; fileName?: string };
+  }, []);
+
+  const loadStemPreviews = React.useCallback(
+    async (job: StemJob) => {
+      if (!job.outputs) return;
+      const slots: Array<{ id: string | null | undefined; title: string; fallbackFileName: string }> = [
+        { id: job.outputs.rawMainVocalAssetId, title: "Raw Main Vocal", fallbackFileName: "raw-main-vocal.wav" },
+        { id: job.outputs.rawBackVocalAssetId, title: "Raw Back Vocal", fallbackFileName: "raw-back-vocal.wav" },
+        { id: job.outputs.instrumentalAssetId, title: "Instrumental", fallbackFileName: "instrumental.wav" },
+      ];
+
+      const next: StemOutputPreview[] = [];
+      for (const slot of slots) {
+        if (!slot.id) continue;
+        const data = await fetchAssetPreview(slot.id);
+        next.push({
+          assetId: slot.id,
+          title: slot.title,
+          fileName: data.fileName || slot.fallbackFileName,
+          url: data.url,
+        });
+      }
+      setStemPreviews(next);
+    },
+    [fetchAssetPreview]
+  );
+
+  async function startStemSeparation() {
+    if (!inputAssetId) {
+      toast.error("Upload a singing record first.");
+      return;
+    }
+    if (uploadBusy) {
+      toast.error("Please wait until upload is complete.");
+      return;
+    }
+
+    setStemStarting(true);
+    setStemPreviews([]);
+    stemLoadedJobIdRef.current = null;
+    try {
+      const res = await fetch("/api/generate/stems/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          inputAssetId,
+          voiceProfileId: voiceProfileId || null,
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error?.message || "Could not start stem separation.");
+      }
+      const next = json.data.job as StemJob;
+      setStemJob(next);
+      setStemJobId(next.id);
+      toast.success("Stem separation started.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not start stem separation.");
+    } finally {
+      setStemStarting(false);
+    }
+  }
+
+  React.useEffect(() => {
+    if (!stemJobId) return;
+    let alive = true;
+    const id = stemJobId;
+
+    async function poll() {
+      const res = await fetch(`/api/generate/stems/status?jobId=${encodeURIComponent(id)}`, { cache: "no-store" });
+      const json = await res.json().catch(() => null);
+      if (!alive || !res.ok || !json?.ok) return;
+
+      const next = json.data.job as StemJob;
+      setStemJob(next);
+
+      if (next.status === "succeeded" && stemLoadedJobIdRef.current !== next.id) {
+        stemLoadedJobIdRef.current = next.id;
+        try {
+          await loadStemPreviews(next);
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : "Could not load stem outputs.");
+        }
+      }
+    }
+
+    void poll();
+    const t = setInterval(() => void poll(), 3000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [stemJobId, loadStemPreviews]);
 
   React.useEffect(() => {
     if (!latestOutputAssetId) return;
@@ -733,6 +861,85 @@ export function GenerateForm({
             {inputPreviewUrl ? <CustomAudioPlayer src={inputPreviewUrl} preload="metadata" variant="compact" className="mt-3 w-full" /> : null}
           </div>
         ) : null}
+
+        <div className="rounded-2xl border border-white/10 bg-[#171d33] p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
+                Stem Separation (Dev)
+              </h3>
+              <p className="mt-1 text-xs text-slate-400">
+                Hidden backend chain: main vocal/instrumental, then lead/back, then de-echo/de-reverb, then denoise.
+              </p>
+            </div>
+
+            <Button
+              type="button"
+              className={cn(
+                "rounded-xl px-5 disabled:pointer-events-auto disabled:cursor-not-allowed",
+                inputAssetId && !uploadBusy ? "og-btn-gradient cursor-pointer" : "border border-white/15 bg-white/10 text-slate-400"
+              )}
+              onClick={() => void startStemSeparation()}
+              disabled={!inputAssetId || uploadBusy || stemStarting || stemJob?.status === "running"}
+            >
+              {stemStarting || stemJob?.status === "running" ? (
+                <>
+                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                  Running
+                </>
+              ) : (
+                "Run Stem Separation"
+              )}
+            </Button>
+          </div>
+
+          {stemJob ? (
+            <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
+              <div className="mb-2 flex items-center justify-between gap-2 text-xs">
+                <span className="text-slate-300">{stemJob.message || "Processing stems..."}</span>
+                <span className="font-semibold text-cyan-200">{Math.max(0, Math.min(100, stemJob.progress))}%</span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all",
+                    stemJob.status === "failed"
+                      ? "bg-red-400"
+                      : stemJob.status === "succeeded"
+                        ? "bg-emerald-400"
+                        : "bg-gradient-to-r from-cyan-400 to-fuchsia-400"
+                  )}
+                  style={{ width: `${Math.max(3, Math.min(100, stemJob.progress))}%` }}
+                />
+              </div>
+              <div className="mt-2 text-[11px] text-slate-400">
+                Stage: <span className="font-semibold text-slate-300">{stemJob.stage}</span>
+              </div>
+              {stemJob.status === "failed" ? (
+                <div className="mt-2 text-xs text-red-300">{stemJob.errorMessage || "Stem separation failed."}</div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {stemPreviews.length > 0 ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              {stemPreviews.map((item) => (
+                <div key={item.assetId} className="rounded-xl border border-white/10 bg-[#10182f] p-3">
+                  <div className="mb-2 text-sm font-semibold">{item.title}</div>
+                  <CustomAudioPlayer src={item.url} preload="none" variant="compact" className="w-full" />
+                  <Button asChild size="sm" className="mt-2 w-full rounded-lg">
+                    <Link href={item.url} target="_blank" download={item.fileName}>
+                      <Download className="mr-2 h-3.5 w-3.5" />
+                      Download
+                    </Link>
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : stemJob?.status === "succeeded" ? (
+            <div className="mt-3 text-xs text-slate-400">Outputs are ready. Loading preview links...</div>
+          ) : null}
+        </div>
 
         <div className="rounded-2xl border border-white/10 bg-[#171d33] p-5">
           <h3 className="flex items-center gap-2 text-xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>

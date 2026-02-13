@@ -30,6 +30,10 @@ const serverSchema = z.object({
   // RunPod (training runner)
   RUNPOD_API_KEY: optionalString,
   RUNPOD_ENDPOINT_ID: optionalString,
+
+  // MVSEP (stem separation)
+  MVSEP_API_TOKEN: optionalString,
+
   TRAINING_TOTAL_EPOCH_DEFAULT: z.coerce.number().int().min(1).max(10000).default(1),
   TRAINING_BATCH_SIZE_DEFAULT: z.coerce.number().int().min(1).max(50).default(4),
   TRAINING_SAVE_EVERY_EPOCH_DEFAULT: z.coerce.number().int().min(1).max(100).default(1),
