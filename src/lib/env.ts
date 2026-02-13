@@ -31,8 +31,9 @@ const serverSchema = z.object({
   RUNPOD_API_KEY: optionalString,
   RUNPOD_ENDPOINT_ID: optionalString,
 
-  // MVSEP (stem separation)
-  MVSEP_API_TOKEN: optionalString,
+  // Cover engine dispatch (RVC AI Cover pipeline)
+  COVER_ENGINE_URL: optionalUrl,
+  COVER_ENGINE_TOKEN: optionalString,
 
   TRAINING_TOTAL_EPOCH_DEFAULT: z.coerce.number().int().min(1).max(10000).default(1),
   TRAINING_BATCH_SIZE_DEFAULT: z.coerce.number().int().min(1).max(50).default(4),

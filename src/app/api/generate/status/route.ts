@@ -3,12 +3,17 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { err, ok } from "@/lib/api-response";
 import { runpodStatus } from "@/lib/runpod";
+import { pollCoverEngineJob } from "@/lib/cover-engine";
 import { deleteObjects } from "@/lib/storage/s3";
 import { canonicalVoiceAssetBaseName } from "@/lib/storage/keys";
 
 const TERMINAL_FAILURE_STATUSES = new Set(["FAILED", "CANCELLED", "CANCELED", "TIMED_OUT", "ABORTED"]);
 const QUEUED_STATUSES = new Set(["IN_QUEUE", "QUEUED"]);
 const RUNNING_STATUSES = new Set(["IN_PROGRESS", "RUNNING", "PROCESSING"]);
+const COVER_QUEUED_STATUSES = new Set(["QUEUED", "PENDING", "IN_QUEUE", "SUBMITTED", "RECEIVED"]);
+const COVER_RUNNING_STATUSES = new Set(["RUNNING", "IN_PROGRESS", "PROCESSING", "STARTED"]);
+const COVER_SUCCESS_STATUSES = new Set(["SUCCEEDED", "SUCCESS", "COMPLETED", "DONE", "FINISHED"]);
+const COVER_FAILURE_STATUSES = new Set(["FAILED", "ERROR", "CANCELLED", "CANCELED", "TIMED_OUT", "ABORTED"]);
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -52,88 +57,177 @@ export async function GET(req: Request) {
   }
 
   try {
-    const st = await runpodStatus(job.runpodRequestId);
-    const status = String(st.status || "").toUpperCase();
+    const isCoverJob = job.runpodRequestId.startsWith("cover:");
+    if (isCoverJob) {
+      const requestId = job.runpodRequestId.slice("cover:".length);
+      const st = await pollCoverEngineJob(requestId);
+      const status = normalizeCoverStatus(st.status);
 
-    if (status === "COMPLETED") {
-      const out = st.output && typeof st.output === "object" ? (st.output as Record<string, unknown>) : null;
-      const outputKey =
-        out && typeof out.outputKey === "string"
-          ? out.outputKey
-          : out && typeof out.outKey === "string"
-            ? out.outKey
-            : job.outputKey;
-      const outputBytes = out && typeof out.outputBytes === "number" ? out.outputBytes : null;
+      if (COVER_SUCCESS_STATUSES.has(status)) {
+        const outputKey = st.outputKey || job.outputKey;
+        const outputBytes = st.outputBytes;
 
-      if (!outputKey) {
+        if (!outputKey) {
+          await prisma.generationJob.update({
+            where: { id: job.id },
+            data: {
+              status: "failed",
+              errorMessage: "Cover completed but output file is missing.",
+            },
+          });
+        } else if (!job.outputAssetId) {
+          const fileName = `${canonicalVoiceAssetBaseName(job.voiceProfile.name)}-cover.wav`;
+          const created = await prisma.uploadAsset.create({
+            data: {
+              userId: session.user.id,
+              voiceProfileId: job.voiceProfileId,
+              type: "generated_output",
+              fileName,
+              fileSize: outputBytes ?? 0,
+              mimeType: "audio/wav",
+              storageKey: outputKey,
+            },
+            select: { id: true },
+          });
+
+          await prisma.generationJob.update({
+            where: { id: job.id },
+            data: {
+              status: "succeeded",
+              progress: 100,
+              outputKey,
+              outputAssetId: created.id,
+              errorMessage: null,
+            },
+          });
+        } else {
+          await prisma.generationJob.update({
+            where: { id: job.id },
+            data: {
+              status: "succeeded",
+              progress: 100,
+              outputKey,
+              errorMessage: null,
+            },
+          });
+        }
+      } else if (COVER_FAILURE_STATUSES.has(status)) {
+        const msg = toUserFacingCoverFailure({ status, error: st.errorMessage });
         await prisma.generationJob.update({
           where: { id: job.id },
           data: {
             status: "failed",
-            errorMessage: "Conversion completed but output file is missing.",
+            errorMessage: msg,
           },
         });
-      } else if (!job.outputAssetId) {
-        const fileName = `${canonicalVoiceAssetBaseName(job.voiceProfile.name)}-converted.wav`;
-        const created = await prisma.uploadAsset.create({
-          data: {
-            userId: session.user.id,
-            voiceProfileId: job.voiceProfileId,
-            type: "generated_output",
-            fileName,
-            fileSize: outputBytes ?? 0,
-            mimeType: "audio/wav",
-            storageKey: outputKey,
-          },
-          select: { id: true },
-        });
-
-        await prisma.generationJob.update({
-          where: { id: job.id },
-          data: {
-            status: "succeeded",
-            progress: 100,
-            outputKey,
-            outputAssetId: created.id,
-            errorMessage: null,
-          },
-        });
-      } else {
-        await prisma.generationJob.update({
-          where: { id: job.id },
-          data: {
-            status: "succeeded",
-            progress: 100,
-            outputKey,
-            errorMessage: null,
-          },
-        });
-      }
-    } else if (TERMINAL_FAILURE_STATUSES.has(status)) {
-      const msg = toUserFacingFailure({ status, error: st.error });
-      await prisma.generationJob.update({
-        where: { id: job.id },
-        data: {
-          status: "failed",
-          errorMessage: msg,
-        },
-      });
-      if (job.outputKey) {
-        try {
-          await deleteObjects([job.outputKey]);
-        } catch {
-          // Best-effort cleanup.
+        if (job.outputKey) {
+          try {
+            await deleteObjects([job.outputKey]);
+          } catch {
+            // Best-effort cleanup.
+          }
         }
+      } else {
+        const normalizedProgress =
+          typeof st.progress === "number"
+            ? Math.max(10, Math.min(95, Math.floor(st.progress)))
+            : COVER_QUEUED_STATUSES.has(status)
+              ? 12
+              : COVER_RUNNING_STATUSES.has(status)
+                ? 60
+                : 25;
+        await prisma.generationJob.update({
+          where: { id: job.id },
+          data: {
+            status: COVER_QUEUED_STATUSES.has(status) ? "queued" : "running",
+            progress: Math.max(job.progress || 0, normalizedProgress),
+          },
+        });
       }
     } else {
-      const nextProgress = QUEUED_STATUSES.has(status) ? 10 : RUNNING_STATUSES.has(status) ? 55 : 25;
-      await prisma.generationJob.update({
-        where: { id: job.id },
-        data: {
-          status: QUEUED_STATUSES.has(status) ? "queued" : "running",
-          progress: Math.max(job.progress || 0, nextProgress),
-        },
-      });
+      const st = await runpodStatus(job.runpodRequestId);
+      const status = String(st.status || "").toUpperCase();
+
+      if (status === "COMPLETED") {
+        const out = st.output && typeof st.output === "object" ? (st.output as Record<string, unknown>) : null;
+        const outputKey =
+          out && typeof out.outputKey === "string"
+            ? out.outputKey
+            : out && typeof out.outKey === "string"
+              ? out.outKey
+              : job.outputKey;
+        const outputBytes = out && typeof out.outputBytes === "number" ? out.outputBytes : null;
+
+        if (!outputKey) {
+          await prisma.generationJob.update({
+            where: { id: job.id },
+            data: {
+              status: "failed",
+              errorMessage: "Conversion completed but output file is missing.",
+            },
+          });
+        } else if (!job.outputAssetId) {
+          const fileName = `${canonicalVoiceAssetBaseName(job.voiceProfile.name)}-converted.wav`;
+          const created = await prisma.uploadAsset.create({
+            data: {
+              userId: session.user.id,
+              voiceProfileId: job.voiceProfileId,
+              type: "generated_output",
+              fileName,
+              fileSize: outputBytes ?? 0,
+              mimeType: "audio/wav",
+              storageKey: outputKey,
+            },
+            select: { id: true },
+          });
+
+          await prisma.generationJob.update({
+            where: { id: job.id },
+            data: {
+              status: "succeeded",
+              progress: 100,
+              outputKey,
+              outputAssetId: created.id,
+              errorMessage: null,
+            },
+          });
+        } else {
+          await prisma.generationJob.update({
+            where: { id: job.id },
+            data: {
+              status: "succeeded",
+              progress: 100,
+              outputKey,
+              errorMessage: null,
+            },
+          });
+        }
+      } else if (TERMINAL_FAILURE_STATUSES.has(status)) {
+        const msg = toUserFacingFailure({ status, error: st.error });
+        await prisma.generationJob.update({
+          where: { id: job.id },
+          data: {
+            status: "failed",
+            errorMessage: msg,
+          },
+        });
+        if (job.outputKey) {
+          try {
+            await deleteObjects([job.outputKey]);
+          } catch {
+            // Best-effort cleanup.
+          }
+        }
+      } else {
+        const nextProgress = QUEUED_STATUSES.has(status) ? 10 : RUNNING_STATUSES.has(status) ? 55 : 25;
+        await prisma.generationJob.update({
+          where: { id: job.id },
+          data: {
+            status: QUEUED_STATUSES.has(status) ? "queued" : "running",
+            progress: Math.max(job.progress || 0, nextProgress),
+          },
+        });
+      }
     }
   } catch {
     // Keep endpoint resilient if provider status call fails.
@@ -174,6 +268,22 @@ function safeErrorText(err: unknown) {
   } catch {
     return String(err).slice(0, 2000);
   }
+}
+
+function normalizeCoverStatus(status: string) {
+  return String(status || "").trim().replaceAll("-", "_").replaceAll(" ", "_").toUpperCase();
+}
+
+function toUserFacingCoverFailure(args: { status: string; error: unknown }) {
+  const label = args.status === "CANCELED" ? "CANCELLED" : args.status;
+  const text = safeErrorText(args.error).toLowerCase();
+
+  if (label === "CANCELLED") return "Cover generation stopped because the request was cancelled.";
+  if (label === "TIMED_OUT") return "Cover generation took too long and was stopped.";
+  if (text.includes("network") || text.includes("gateway") || text.includes("worker")) {
+    return "Cover generation failed because of a temporary server issue.";
+  }
+  return "Cover generation failed. Please try again.";
 }
 
 export const runtime = "nodejs";

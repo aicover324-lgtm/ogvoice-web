@@ -34,12 +34,6 @@ type VoiceCoverKeyArgs = VoiceNamedKeyArgs & {
   extension: string;
 };
 
-type StemOutputKeyArgs = {
-  userId: string;
-  jobId: string;
-  stemName: string;
-};
-
 const SAFE_KEY_PART_RE = /^[a-zA-Z0-9_-]+$/;
 
 function assertSafeKeyPart(value: string, label: string) {
@@ -137,11 +131,4 @@ export function voiceDatasetWavKey(args: VoiceNamedKeyArgs) {
 // Long-term dataset archive (lossless, smaller than WAV)
 export function voiceDatasetFlacKey(args: VoiceNamedKeyArgs) {
   return `datasets/${voicePrefix(args)}/${canonicalVoiceAssetBaseName(args.voiceName)}.flac`;
-}
-
-export function stemOutputWavKey(args: StemOutputKeyArgs) {
-  assertSafeKeyPart(args.userId, "userId");
-  assertSafeKeyPart(args.jobId, "jobId");
-  const stem = canonicalVoiceAssetBaseName(args.stemName || "stem");
-  return `outputs/u/${args.userId}/stems/${args.jobId}/${stem}.wav`;
 }
