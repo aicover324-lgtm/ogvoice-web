@@ -122,6 +122,7 @@ export function GenerateForm({
   const [outputUrl, setOutputUrl] = React.useState<string | null>(null);
   const [outputFileName, setOutputFileName] = React.useState<string | null>(null);
   const [stemPreview, setStemPreview] = React.useState<GenJob["stemPreview"]>(null);
+  const [latestResultPlaying, setLatestResultPlaying] = React.useState(false);
   const [loadingOutput, setLoadingOutput] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [dragState, setDragState] = React.useState<"idle" | "valid" | "invalid">("idle");
@@ -368,6 +369,7 @@ export function GenerateForm({
         throw new Error(json?.error?.message || "Could not load converted audio.");
       }
       const data = json.data as { url: string; fileName?: string };
+      setLatestResultPlaying(false);
       setOutputUrl(data.url);
       setOutputFileName(preferredName || data.fileName || "converted.wav");
     } catch (e) {
@@ -466,10 +468,18 @@ export function GenerateForm({
   }
 
   const canCreateCover = !!inputAssetId && !uploadBusy && !recordingBusy && !loading;
+  const activeConversionItem = React.useMemo(() => {
+    if (jobId) {
+      const current = queue.find((item) => item.id === jobId);
+      if (current) return current;
+    }
+    return queue.find((item) => item.status === "queued" || item.status === "running") || null;
+  }, [jobId, queue]);
+  const conversionProgress = Math.max(0, Math.min(100, activeConversionItem?.progress ?? 0));
 
   return (
     <div className="space-y-6">
-      <div className="grid items-start gap-6 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
+      <div className="grid items-start gap-6">
       <aside className="min-w-0 self-start rounded-2xl border border-white/10 bg-[#11172b]">
         <div className="border-b border-white/10 p-4">
           <div className="mb-3 flex items-center justify-between">
@@ -517,7 +527,8 @@ export function GenerateForm({
         </div>
       </aside>
 
-      <section className="min-w-0 self-start space-y-5">
+      <section className="min-w-0 self-start grid gap-6 xl:grid-cols-2">
+        <div className="space-y-5">
         <fieldset
           onDragEnter={(e) => {
             e.preventDefault();
@@ -555,7 +566,7 @@ export function GenerateForm({
             void uploaderRef.current?.uploadFiles([file]);
           }}
           className={cn(
-            "rounded-2xl bg-[#171d33] p-10 text-center transition-colors",
+            "min-h-[560px] rounded-2xl bg-[#171d33] p-10 text-center transition-colors",
             dragState === "valid"
               ? "border-2 border-dashed border-cyan-400/70"
               : dragState === "invalid"
@@ -799,8 +810,9 @@ export function GenerateForm({
             {inputPreviewUrl ? <CustomAudioPlayer src={inputPreviewUrl} preload="metadata" variant="compact" className="mt-3 w-full" /> : null}
           </div>
         ) : null}
+        </div>
 
-        <div className="rounded-2xl border border-white/10 bg-[#171d33] p-5">
+        <div className="h-full min-h-[560px] rounded-2xl border border-white/10 bg-[#171d33] p-5">
           <h3 className="flex items-center gap-2 text-xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
             Voice Style
           </h3>
@@ -940,79 +952,129 @@ export function GenerateForm({
             </div>
           ) : null}
 
-          <div className="mt-4 overflow-hidden rounded-xl bg-[#0e1733] p-4">
-            <div className="mb-4 flex h-16 items-end gap-1">
-              {WAVE_BARS.map((bar) => (
-                <span
-                  key={bar.id}
-                  className="w-full rounded-full bg-cyan-400/70"
-                  style={{ height: `${bar.height}%`, opacity: bar.opacity }}
+          {activeConversionItem ? (
+            <div className="mt-3 rounded-xl border border-white/10 bg-[#0e1733] p-3">
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <span className="font-semibold uppercase tracking-[0.08em] text-slate-300">Conversion Progress</span>
+                <span className={cn(
+                  "font-semibold",
+                  activeConversionItem.status === "succeeded"
+                    ? "text-emerald-300"
+                    : activeConversionItem.status === "failed"
+                      ? "text-red-300"
+                      : "text-cyan-200"
+                )}>
+                  {conversionStatusText(activeConversionItem.status, conversionProgress)}
+                </span>
+              </div>
+              <div className="relative mt-2 h-2.5 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all duration-500",
+                    activeConversionItem.status === "succeeded"
+                      ? "bg-emerald-400"
+                      : activeConversionItem.status === "failed"
+                        ? "bg-red-400"
+                        : "bg-gradient-to-r from-cyan-400 to-fuchsia-400"
+                  )}
+                  style={{ width: `${Math.max(activeConversionItem.status === "queued" ? 8 : 4, conversionProgress)}%` }}
                 />
-              ))}
-            </div>
-
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-semibold">{outputFileName || "No result yet"}</div>
-                  <div className="truncate text-xs text-muted-foreground">
-                    {activeResultItem?.voiceName || selectedVoice?.name || "Cloned voice"}
-                  </div>
+                {activeConversionItem.status === "queued" || activeConversionItem.status === "running" ? (
+                  <div className="pointer-events-none absolute inset-y-0 w-16 bg-gradient-to-r from-transparent via-white/45 to-transparent animate-[og-progress-slide_1.25s_linear_infinite]" />
+                ) : null}
               </div>
-
-              <div className="grid shrink-0 grid-cols-2 gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 rounded-lg"
-                  disabled={!outputUrl || loadingOutput}
-                  onClick={() => {
-                    if (!latestOutputAssetId) return;
-                    void fetchOutputUrl(latestOutputAssetId, latestSucceeded?.outputFileName || null);
-                  }}
-                  title="Refresh audio link"
-                >
-                  <CloudUpload className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 rounded-lg"
-                  disabled={!outputUrl}
-                  onClick={() => {
-                    if (!outputUrl) return;
-                    navigator.clipboard.writeText(outputUrl).then(() => {
-                      toast.success("Link copied.");
-                    }).catch(() => {
-                      toast.error("Could not copy link.");
-                    });
-                  }}
-                  title="Copy link"
-                >
-                  <Share2 className="h-4 w-4" />
-                </Button>
+              <div className="mt-2 text-[11px] text-slate-400">
+                {conversionStatusHint(activeConversionItem.status)}
               </div>
             </div>
+          ) : null}
 
-            <CustomAudioPlayer
-              src={outputUrl || null}
-              preload="none"
-              className="mt-3 w-full"
-            />
+          <div className="mt-4 grid gap-4 overflow-hidden rounded-xl bg-[#0e1733] p-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+            <div>
+              <div className="mb-4 flex h-16 items-end gap-1">
+                {WAVE_BARS.map((bar, idx) => (
+                  <span
+                    key={bar.id}
+                    className="w-full origin-bottom rounded-full bg-cyan-400/70"
+                    style={{
+                      height: `${bar.height}%`,
+                      opacity: latestResultPlaying ? Math.min(1, bar.opacity + 0.12) : bar.opacity,
+                      animation:
+                        latestResultPlaying && outputUrl
+                          ? `og-wave-pulse ${1 + (idx % 5) * 0.14}s ease-in-out infinite`
+                          : "none",
+                      animationDelay: latestResultPlaying && outputUrl ? `${idx * 0.045}s` : "0s",
+                    }}
+                  />
+                ))}
+              </div>
 
-            {outputUrl ? (
-              <Button asChild className="og-btn-gradient mt-3 w-full rounded-xl">
-                <Link href={outputUrl} target="_blank" download={outputFileName || "converted.wav"}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold">{outputFileName || "No result yet"}</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {activeResultItem?.voiceName || selectedVoice?.name || "Cloned voice"}
+                    </div>
+                </div>
+
+                <div className="grid shrink-0 grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 rounded-lg"
+                    disabled={!outputUrl || loadingOutput}
+                    onClick={() => {
+                      if (!latestOutputAssetId) return;
+                      void fetchOutputUrl(latestOutputAssetId, latestSucceeded?.outputFileName || null);
+                    }}
+                    title="Refresh audio link"
+                  >
+                    <CloudUpload className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 rounded-lg"
+                    disabled={!outputUrl}
+                    onClick={() => {
+                      if (!outputUrl) return;
+                      navigator.clipboard.writeText(outputUrl).then(() => {
+                        toast.success("Link copied.");
+                      }).catch(() => {
+                        toast.error("Could not copy link.");
+                      });
+                    }}
+                    title="Copy link"
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-[#11172b] p-3">
+              <CustomAudioPlayer
+                src={outputUrl || null}
+                preload="none"
+                className="w-full"
+                onPlayStateChange={setLatestResultPlaying}
+              />
+
+              {outputUrl ? (
+                <Button asChild className="og-btn-gradient mt-3 w-full rounded-xl">
+                  <Link href={outputUrl} target="_blank" download={outputFileName || "converted.wav"}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download latest
+                  </Link>
+                </Button>
+              ) : (
+                <Button className="mt-3 w-full rounded-xl" disabled>
                   <Download className="mr-2 h-4 w-4" />
                   Download latest
-                </Link>
-              </Button>
-            ) : (
-              <Button className="mt-3 w-full rounded-xl" disabled>
-                <Download className="mr-2 h-4 w-4" />
-                Download latest
-              </Button>
-            )}
+                </Button>
+              )}
+            </div>
           </div>
 
           {job?.status === "succeeded" && stemPreview ? (
@@ -1203,6 +1265,21 @@ function uploadStatusText(state: UploadPanelState) {
   if (state.phase === "cancelled") return "Upload cancelled.";
   if (state.phase === "error") return state.error || "Upload failed.";
   return "";
+}
+
+function conversionStatusText(status: GenJob["status"], progress: number) {
+  if (status === "queued") return `Queued (${progress}%)`;
+  if (status === "running") return `Running (${progress}%)`;
+  if (status === "succeeded") return "Completed (100%)";
+  if (status === "failed") return "Failed";
+  return "Processing";
+}
+
+function conversionStatusHint(status: GenJob["status"]) {
+  if (status === "queued") return "Your cover is in queue. Processing starts shortly.";
+  if (status === "running") return "Conversion is active. Keep this tab open to see live updates.";
+  if (status === "succeeded") return "Conversion finished. You can play and download from Latest Result.";
+  return "Conversion stopped. You can retry with the same singing record.";
 }
 
 function formatFileSize(size: number | null) {
