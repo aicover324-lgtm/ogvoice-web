@@ -204,9 +204,8 @@ export async function createStemSeparationJob(args: {
     audioBytes: inputBytes,
     fileName: inputAsset.fileName,
     mimeType: inputAsset.mimeType,
-    sepType: 26,
-    addOpt1: 0,
-    addOpt2: 7,
+    sepType: 40,
+    addOpt1: 81,
     outputFormat: 1,
   });
 
