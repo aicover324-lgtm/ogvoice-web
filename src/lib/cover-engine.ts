@@ -15,6 +15,11 @@ export type CoverEngineStatusResponse = {
   progress: number | null;
   outputKey: string | null;
   outputBytes: number | null;
+  stemKeys: {
+    mainVocalsKey: string | null;
+    backVocalsKey: string | null;
+    instrumentalKey: string | null;
+  };
   errorMessage: string | null;
   raw: Record<string, unknown>;
 };
@@ -104,6 +109,19 @@ export async function pollCoverEngineJob(requestId: string): Promise<CoverEngine
     firstString(body.outputKey, body.outKey, nestedOutput?.outputKey, nestedOutput?.outKey) || null;
   const outputBytes =
     firstNumber(body.outputBytes, body.bytes, nestedOutput?.outputBytes, nestedOutput?.bytes) ?? null;
+  const stemObj =
+    (body.stemKeys && typeof body.stemKeys === "object" ? (body.stemKeys as Record<string, unknown>) : null) ||
+    (nestedOutput?.stemKeys && typeof nestedOutput.stemKeys === "object"
+      ? (nestedOutput.stemKeys as Record<string, unknown>)
+      : null);
+  const stemKeys = {
+    mainVocalsKey:
+      firstString(stemObj?.mainVocalsKey, body.mainVocalsKey, nestedOutput?.mainVocalsKey) || null,
+    backVocalsKey:
+      firstString(stemObj?.backVocalsKey, body.backVocalsKey, nestedOutput?.backVocalsKey) || null,
+    instrumentalKey:
+      firstString(stemObj?.instrumentalKey, body.instrumentalKey, nestedOutput?.instrumentalKey) || null,
+  };
   const progress = firstNumber(body.progress, body.percent) ?? null;
   const status = firstString(body.status, body.state) || "UNKNOWN";
   const errorMessage =
@@ -114,6 +132,7 @@ export async function pollCoverEngineJob(requestId: string): Promise<CoverEngine
     progress,
     outputKey,
     outputBytes,
+    stemKeys,
     errorMessage,
     raw: body,
   };

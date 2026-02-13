@@ -25,6 +25,12 @@ export async function GET(req: Request, ctx: Ctx) {
 
     const outputKey = firstString(out?.outputKey, out?.outKey) || null;
     const outputBytes = firstNumber(out?.outputBytes, out?.bytes) ?? null;
+    const stemKeysObj = asRecord(out?.stemKeys);
+    const stemKeys = {
+      mainVocalsKey: firstString(stemKeysObj?.mainVocalsKey, out?.mainVocalsKey) || null,
+      backVocalsKey: firstString(stemKeysObj?.backVocalsKey, out?.backVocalsKey) || null,
+      instrumentalKey: firstString(stemKeysObj?.instrumentalKey, out?.instrumentalKey) || null,
+    };
 
     if (status === "COMPLETED") {
       return NextResponse.json({
@@ -33,6 +39,7 @@ export async function GET(req: Request, ctx: Ctx) {
         progress: 100,
         outputKey,
         outputBytes,
+        stemKeys,
         error: null,
       });
     }
@@ -44,6 +51,7 @@ export async function GET(req: Request, ctx: Ctx) {
         progress: 100,
         outputKey,
         outputBytes,
+        stemKeys,
         error: safeText(st.error) || "Cover generation failed",
       });
     }
@@ -55,6 +63,7 @@ export async function GET(req: Request, ctx: Ctx) {
       progress,
       outputKey,
       outputBytes,
+      stemKeys,
       error: null,
     });
   } catch (e) {
