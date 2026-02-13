@@ -129,9 +129,11 @@
     @apply bg-background text-foreground;
     font-family: var(--font-body);
     overflow-x: hidden;
+    overflow-y: scroll;
   }
   html {
     overflow-x: hidden;
+    scrollbar-gutter: stable;
   }
   iframe {
     border: 0 !important;
