@@ -129,7 +129,6 @@
     @apply bg-background text-foreground;
     font-family: var(--font-body);
     overflow-x: hidden;
-    overflow-y: scroll;
   }
   html {
     overflow-x: hidden;
