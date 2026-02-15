@@ -574,7 +574,7 @@ export function GlobalMediaPlayerProvider({ children }: { children: React.ReactN
 
                 <fieldset
                   aria-label="Playback speed"
-                  className="inline-flex items-center rounded-full border border-white/15 bg-white/[0.06] p-0.5"
+                  className="inline-flex shrink-0 items-center overflow-hidden rounded-full border border-white/15 bg-white/[0.06] p-0.5"
                 >
                   {([0.75, 1, 1.25] as const).map((rate) => {
                     const activeRate = Math.abs(playbackRate - rate) < 0.001;
@@ -584,7 +584,7 @@ export function GlobalMediaPlayerProvider({ children }: { children: React.ReactN
                         type="button"
                         onClick={() => changePlaybackRate(rate)}
                         className={
-                          "h-7 min-w-12 rounded-full px-2 text-[11px] font-semibold cursor-pointer transition-colors " +
+                          "h-7 min-w-[42px] rounded-full px-2 text-[11px] font-semibold cursor-pointer transition-colors " +
                           (activeRate
                             ? "bg-cyan-500/30 text-cyan-100"
                             : "text-slate-200 hover:bg-white/10")
