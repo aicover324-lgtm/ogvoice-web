@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PremiumCard } from "@/components/app/premium-card";
 import { CustomAudioPlayer } from "@/components/app/custom-audio-player";
@@ -52,32 +53,65 @@ const EXAMPLES: QualityExample[] = [
   },
 ];
 
+const GUIDE_OPEN_STORAGE_KEY = "ogvoice.voiceQualityGuide.open";
+
 export function DatasetQualityGuide() {
   const good = EXAMPLES[0];
   const bad = EXAMPLES.slice(1);
+  const [open, setOpen] = React.useState(true);
+
+  React.useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(GUIDE_OPEN_STORAGE_KEY);
+      if (raw === "0") setOpen(false);
+      if (raw === "1") setOpen(true);
+    } catch {
+      // no-op
+    }
+  }, []);
+
+  React.useEffect(() => {
+    try {
+      window.localStorage.setItem(GUIDE_OPEN_STORAGE_KEY, open ? "1" : "0");
+    } catch {
+      // no-op
+    }
+  }, [open]);
 
   return (
     <PremiumCard className="border-white/10 bg-[#101b37] p-5 text-slate-100" ringClassName="ring-white/10">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.06]"
+      >
         <h3 className="text-sm font-semibold text-slate-100" style={{ fontFamily: "var(--font-heading)" }}>
           Voice Quality Guide
         </h3>
-        <Badge variant="outline" className="border-cyan-300/40 bg-cyan-400/10 text-cyan-200">
-          Real Examples
-        </Badge>
-      </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="border-cyan-300/40 bg-cyan-400/10 text-cyan-200">
+            Real Examples
+          </Badge>
+          <ChevronDown className={cn("h-4 w-4 text-slate-300 transition-transform", open ? "rotate-180" : "rotate-0")} />
+        </div>
+      </button>
 
-      <p className="mt-2 text-xs text-slate-300">
-        Top sample is the correct reference. Compare it with wrong examples before uploading your singing record.
-      </p>
+      {open ? (
+        <>
+          <p className="mt-3 text-xs text-slate-300">
+            Top sample is the correct reference. Compare it with wrong examples before uploading your singing record.
+          </p>
 
-      <QualityExampleCard example={good} prominent />
+          <QualityExampleCard example={good} prominent />
 
-      <div className="mt-3 grid gap-3 md:grid-cols-3">
-        {bad.map((item) => (
-          <QualityExampleCard key={item.id} example={item} />
-        ))}
-      </div>
+          <div className="mt-3 grid gap-3 md:grid-cols-3">
+            {bad.map((item) => (
+              <QualityExampleCard key={item.id} example={item} />
+            ))}
+          </div>
+        </>
+      ) : null}
     </PremiumCard>
   );
 }
