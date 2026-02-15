@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { PremiumCard } from "@/components/app/premium-card";
 import { CustomAudioPlayer } from "@/components/app/custom-audio-player";
@@ -89,6 +90,7 @@ function QualityExampleCard({
   prominent?: boolean;
 }) {
   const isGood = example.kind === "good";
+  const [playing, setPlaying] = React.useState(false);
 
   return (
     <div
@@ -114,9 +116,15 @@ function QualityExampleCard({
 
       <div className="mt-1 text-xs text-slate-300">{example.description}</div>
 
-      <WaveformBars bars={example.bars} kind={example.kind} prominent={prominent} />
+      <WaveformBars bars={example.bars} kind={example.kind} prominent={prominent} playing={playing} />
 
-      <CustomAudioPlayer src={example.src} preload="metadata" variant="compact" className="mt-2" />
+      <CustomAudioPlayer
+        src={example.src}
+        preload="metadata"
+        variant="compact"
+        className="mt-2"
+        onPlayStateChange={setPlaying}
+      />
     </div>
   );
 }
@@ -125,21 +133,50 @@ function WaveformBars({
   bars,
   kind,
   prominent,
+  playing,
 }: {
   bars: number[];
   kind: ExampleKind;
   prominent: boolean;
+  playing: boolean;
 }) {
+  const [phase, setPhase] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!playing) {
+      setPhase(0);
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setPhase((prev) => (prev + 0.52) % (Math.PI * 2));
+    }, 85);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [playing]);
+
   return (
     <div
       className={cn(
         "mt-2 overflow-hidden rounded-lg border bg-[#0b1328] p-2",
         kind === "good" ? "border-emerald-300/20" : "border-rose-300/20",
+        playing && kind === "good" ? "shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_0_24px_rgba(34,211,238,0.2)]" : "",
+        playing && kind === "bad" ? "shadow-[0_0_0_1px_rgba(251,113,133,0.18),0_0_20px_rgba(251,146,60,0.16)]" : "",
         prominent ? "h-[108px]" : "h-[82px]"
       )}
     >
       <div className="flex h-full items-end gap-[2px]">
         {bars.map((bar, idx) => (
+          (() => {
+            const motion =
+              !playing
+                ? 1
+                : 0.72 +
+                  0.34 * Math.abs(Math.sin(phase + idx * 0.39)) +
+                  0.12 * Math.abs(Math.sin(phase * 0.47 + idx * 0.19));
+            const animated = Math.max(0.08, Math.min(1, bar * motion));
+            return (
           <span
             key={`${kind}-${idx}-${Math.round(bar * 1000)}`}
             className={cn(
@@ -149,10 +186,13 @@ function WaveformBars({
                 : "bg-gradient-to-t from-rose-500/55 via-orange-400/65 to-amber-200/80"
             )}
             style={{
-              height: `${Math.max(10, Math.min(100, bar * 100))}%`,
-              opacity: 0.56 + ((idx % 8) * 0.05),
+              height: `${Math.max(10, Math.min(100, animated * 100))}%`,
+              opacity: Math.min(1, 0.54 + ((idx % 8) * 0.05) + (playing ? 0.09 : 0)),
+              transition: "height 90ms linear, opacity 180ms ease",
             }}
           />
+            );
+          })()
         ))}
       </div>
     </div>
