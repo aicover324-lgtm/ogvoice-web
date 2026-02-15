@@ -84,7 +84,7 @@ export function DatasetQualityGuide() {
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.06]"
+        className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.06]"
       >
         <h3 className="text-sm font-semibold text-slate-100" style={{ fontFamily: "var(--font-heading)" }}>
           Voice Quality Guide
