@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { err, ok } from "@/lib/api-response";
+import { env } from "@/lib/env";
 import { runpodStatus } from "@/lib/runpod";
 import { pollCoverEngineJob } from "@/lib/cover-engine";
 import { deleteObjects } from "@/lib/storage/s3";
@@ -125,6 +126,12 @@ export async function GET(req: Request) {
               errorMessage: null,
             },
           });
+          await cleanupGeneratedOutputsForVoice({
+            userId: session.user.id,
+            voiceProfileId: job.voiceProfileId,
+            keepLatest: env.GENERATED_OUTPUT_KEEP_PER_VOICE,
+            protectAssetId: created.id,
+          }).catch(() => null);
           jobMutated = true;
         } else {
           const shouldSyncSuccessState =
@@ -241,6 +248,12 @@ export async function GET(req: Request) {
               errorMessage: null,
             },
           });
+          await cleanupGeneratedOutputsForVoice({
+            userId: session.user.id,
+            voiceProfileId: job.voiceProfileId,
+            keepLatest: env.GENERATED_OUTPUT_KEEP_PER_VOICE,
+            protectAssetId: created.id,
+          }).catch(() => null);
           jobMutated = true;
         } else {
           const shouldSyncSuccessState =
@@ -449,6 +462,60 @@ function stripFileExtension(fileName: string) {
   const idx = fileName.lastIndexOf(".");
   if (idx <= 0) return fileName;
   return fileName.slice(0, idx);
+}
+
+async function cleanupGeneratedOutputsForVoice(args: {
+  userId: string;
+  voiceProfileId: string;
+  keepLatest: number;
+  protectAssetId?: string;
+}) {
+  const keepLatest = Math.max(1, Math.min(100, Math.floor(args.keepLatest || 0)));
+  const rows = await prisma.uploadAsset.findMany({
+    where: {
+      userId: args.userId,
+      voiceProfileId: args.voiceProfileId,
+      type: "generated_output",
+    },
+    orderBy: { createdAt: "desc" },
+    take: keepLatest + 250,
+    select: { id: true, storageKey: true },
+  });
+
+  if (rows.length <= keepLatest) return;
+
+  const keepIds = new Set(rows.slice(0, keepLatest).map((r) => r.id));
+  if (args.protectAssetId) keepIds.add(args.protectAssetId);
+
+  const stale = rows.filter((r) => !keepIds.has(r.id));
+  if (stale.length === 0) return;
+
+  const staleIds = stale.map((r) => r.id);
+  const staleKeys = Array.from(new Set(stale.map((r) => r.storageKey).filter((v) => !!v)));
+
+  if (staleKeys.length > 0) {
+    await deleteObjects(staleKeys);
+  }
+
+  await prisma.$transaction([
+    prisma.generationJob.updateMany({
+      where: { userId: args.userId, outputAssetId: { in: staleIds } },
+      data: { outputAssetId: null, outputKey: null },
+    }),
+    prisma.uploadAsset.deleteMany({ where: { id: { in: staleIds } } }),
+    prisma.auditLog.create({
+      data: {
+        userId: args.userId,
+        action: "storage.generated.keep_latest",
+        meta: {
+          voiceProfileId: args.voiceProfileId,
+          keepLatest,
+          deletedAssets: staleIds.length,
+          deletedObjects: staleKeys.length,
+        },
+      },
+    }),
+  ]);
 }
 
 export const runtime = "nodejs";

@@ -2,6 +2,7 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   DeleteObjectsCommand,
   CopyObjectCommand,
   ListObjectsV2Command,
@@ -81,6 +82,19 @@ export async function getObjectBytes(args: { key: string; maxBytes: number }) {
     throw new Error(`Object too large (${buf.length} bytes)`);
   }
   return buf;
+}
+
+export async function objectExists(key: string) {
+  try {
+    const cmd = new HeadObjectCommand({
+      Bucket: env.S3_BUCKET,
+      Key: key,
+    });
+    await s3.send(cmd);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function getObjectRangeBytes(args: { key: string; start: number; end: number; maxBytes: number }) {

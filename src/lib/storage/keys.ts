@@ -14,6 +14,12 @@ type TrainingCheckpointKeyArgs = {
   datasetAssetId: string;
 };
 
+type TrainingDatasetSnapshotKeyArgs = {
+  userId: string;
+  voiceProfileId: string;
+  datasetAssetId: string;
+};
+
 type GenerationNamedKeyArgs = {
   userId: string;
   voiceProfileId: string;
@@ -96,6 +102,18 @@ export function voiceCoverImageKey(args: VoiceCoverKeyArgs) {
 // Dataset wav for a specific training job
 export function trainingDatasetWavKey(args: TrainingNamedKeyArgs) {
   return `datasets/${trainingPrefix(args)}/${canonicalVoiceAssetBaseName(args.voiceName)}.wav`;
+}
+
+export function trainingDatasetSnapshotWavKey(args: TrainingDatasetSnapshotKeyArgs) {
+  assertSafeKeyPart(args.userId, "userId");
+  assertSafeKeyPart(args.voiceProfileId, "voiceProfileId");
+  assertSafeKeyPart(args.datasetAssetId, "datasetAssetId");
+  return `datasets/u/${args.userId}/v/${args.voiceProfileId}/snapshots/ds-${args.datasetAssetId}.wav`;
+}
+
+export function isSharedTrainingDatasetSnapshotKey(key: string | null | undefined) {
+  if (!key) return false;
+  return /^datasets\/u\/[^/]+\/v\/[^/]+\/snapshots\/ds-[^/]+\.wav$/i.test(key);
 }
 
 // Zipped inference artifact (e.g. model.pth + index)

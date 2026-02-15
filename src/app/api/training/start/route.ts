@@ -6,12 +6,12 @@ import { err, ok } from "@/lib/api-response";
 import { env } from "@/lib/env";
 import {
   trainingCheckpointZipKey,
-  trainingDatasetWavKey,
+  trainingDatasetSnapshotWavKey,
   trainingModelName,
   trainingModelZipKey,
   voiceDatasetFlacKey,
 } from "@/lib/storage/keys";
-import { copyObject, deleteObjects } from "@/lib/storage/s3";
+import { copyObject, deleteObjects, objectExists } from "@/lib/storage/s3";
 import { runpodRun } from "@/lib/runpod";
 import { precheckDatasetWav } from "@/lib/training/precheck";
 
@@ -81,11 +81,10 @@ export async function POST(req: Request) {
     select: { id: true },
   });
 
-  const datasetKey = trainingDatasetWavKey({
+  const datasetKey = trainingDatasetSnapshotWavKey({
     userId: session.user.id,
     voiceProfileId: voice.id,
-    jobId: job.id,
-    voiceName: voice.name,
+    datasetAssetId: latestDataset.id,
   });
   const datasetArchiveKey = voiceDatasetFlacKey({
     userId: session.user.id,
@@ -104,10 +103,18 @@ export async function POST(req: Request) {
     datasetAssetId: latestDataset.id,
   });
   const modelName = trainingModelName(voice.id);
+  let snapshotCreated = false;
 
   try {
-    // Snapshot the dataset into the job-specific path (prevents mid-training replacement).
-    await copyObject({ fromKey: latestDataset.storageKey, toKey: datasetKey });
+    // Keep one immutable dataset snapshot per dataset asset and reuse it across retries/jobs.
+    // This avoids copying large WAV files on every training run.
+    if (latestDataset.storageKey !== datasetKey) {
+      const exists = await objectExists(datasetKey);
+      if (!exists) {
+        await copyObject({ fromKey: latestDataset.storageKey, toKey: datasetKey });
+        snapshotCreated = true;
+      }
+    }
 
     const runRes = await runpodRun({
       datasetKey,
@@ -136,7 +143,9 @@ export async function POST(req: Request) {
     return ok({ jobId: job.id, runpodRequestId: runRes.id });
   } catch (e) {
     try {
-      await deleteObjects([datasetKey, outKey]);
+      const cleanupKeys = [outKey];
+      if (snapshotCreated) cleanupKeys.push(datasetKey);
+      await deleteObjects(cleanupKeys);
     } catch {
       // Best-effort cleanup only.
     }

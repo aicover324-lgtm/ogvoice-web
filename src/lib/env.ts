@@ -60,6 +60,9 @@ const serverSchema = z.object({
 
   // Automatic cleanup
   PURGE_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(14),
+  UPLOAD_DRAFT_RETENTION_HOURS: z.coerce.number().int().min(6).max(24 * 90).default(72),
+  GENERATED_OUTPUT_KEEP_PER_VOICE: z.coerce.number().int().min(1).max(100).default(20),
+  GENERATED_OUTPUT_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(60),
   PURGE_CRON_SECRET: optionalString,
 });
 

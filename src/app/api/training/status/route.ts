@@ -5,7 +5,12 @@ import { prisma } from "@/lib/prisma";
 import { err, ok } from "@/lib/api-response";
 import { env } from "@/lib/env";
 import { runpodCancel, runpodRun, runpodStatus } from "@/lib/runpod";
-import { trainingCheckpointZipKey, trainingModelName, voiceDatasetFlacKey } from "@/lib/storage/keys";
+import {
+  isSharedTrainingDatasetSnapshotKey,
+  trainingCheckpointZipKey,
+  trainingModelName,
+  voiceDatasetFlacKey,
+} from "@/lib/storage/keys";
 import { deleteObjects } from "@/lib/storage/s3";
 
 const querySchema = z.object({
@@ -128,7 +133,9 @@ export async function GET(req: Request) {
 
           // Delete the old WAV object (if different) and the job snapshot WAV.
           const toDelete = [asset.storageKey];
-          if (job.datasetKey) toDelete.push(job.datasetKey);
+          if (job.datasetKey && !isSharedTrainingDatasetSnapshotKey(job.datasetKey)) {
+            toDelete.push(job.datasetKey);
+          }
           const uniq = Array.from(new Set(toDelete)).filter((k) => k && k !== datasetArchiveKey);
           if (uniq.length > 0) await deleteObjects(uniq);
         }
@@ -429,7 +436,9 @@ async function cleanupFailedStorageArtifacts(args: {
   artifactKey: string | null;
 }) {
   const keys = new Set<string>();
-  if (args.datasetKey) keys.add(args.datasetKey);
+  if (args.datasetKey && !isSharedTrainingDatasetSnapshotKey(args.datasetKey)) {
+    keys.add(args.datasetKey);
+  }
   if (args.artifactKey) keys.add(args.artifactKey);
 
   if (args.datasetAssetId) {

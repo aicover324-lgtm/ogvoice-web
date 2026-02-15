@@ -1,11 +1,26 @@
 import { prisma } from "@/lib/prisma";
 import { deleteObjects, listObjectKeysByPrefix } from "@/lib/storage/s3";
+import { UploadAssetType } from "@prisma/client";
+
+const STALE_DRAFT_TYPES: UploadAssetType[] = ["dataset_audio", "voice_cover_image"];
 
 export type PurgeResult = {
   checkedVoices: number;
   purgedVoices: number;
   deletedDbAssets: number;
   deletedStorageObjects: number;
+};
+
+export type DraftCleanupResult = {
+  checkedDraftAssets: number;
+  deletedDraftAssets: number;
+  deletedDraftStorageObjects: number;
+};
+
+export type GeneratedOutputCleanupResult = {
+  checkedGeneratedAssets: number;
+  deletedGeneratedAssets: number;
+  deletedGeneratedStorageObjects: number;
 };
 
 function voiceStoragePrefixes(args: { userId: string; voiceProfileId: string }) {
@@ -175,4 +190,165 @@ export async function purgeVoiceNow(args: { userId: string; voiceProfileId: stri
   } catch {
     return { ok: false as const, reason: "PURGE_FAILED" as const };
   }
+}
+
+function staleDraftWhere(args: { cutoff: Date; userId?: string }) {
+  return {
+    ...(args.userId ? { userId: args.userId } : {}),
+    voiceProfileId: null,
+    createdAt: { lt: args.cutoff },
+    type: { in: STALE_DRAFT_TYPES },
+  };
+}
+
+async function cleanupDraftAssetsInternal(args: {
+  cutoff: Date;
+  limit: number;
+  userId?: string;
+  auditAction?: string;
+}) {
+  const stale = await prisma.uploadAsset.findMany({
+    where: staleDraftWhere({ cutoff: args.cutoff, userId: args.userId }),
+    orderBy: { createdAt: "asc" },
+    take: Math.max(1, Math.min(1000, args.limit)),
+    select: { id: true, storageKey: true },
+  });
+
+  if (stale.length === 0) {
+    return {
+      checkedDraftAssets: 0,
+      deletedDraftAssets: 0,
+      deletedDraftStorageObjects: 0,
+    } satisfies DraftCleanupResult;
+  }
+
+  const keys = Array.from(new Set(stale.map((x) => normalizeStorageKey(x.storageKey)).filter((v): v is string => !!v)));
+  const ids = stale.map((x) => x.id);
+
+  let deletedStorageObjects = 0;
+  try {
+    const res = await deleteObjects(keys);
+    deletedStorageObjects = res.deleted;
+  } catch {
+    // Keep DB rows if storage deletion failed; try again next run.
+    return {
+      checkedDraftAssets: stale.length,
+      deletedDraftAssets: 0,
+      deletedDraftStorageObjects: 0,
+    } satisfies DraftCleanupResult;
+  }
+
+  const deletedDb = await prisma.uploadAsset.deleteMany({
+    where: { id: { in: ids } },
+  });
+
+  if (args.userId && args.auditAction) {
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: args.userId,
+          action: args.auditAction,
+          meta: {
+            checkedDraftAssets: stale.length,
+            deletedDraftAssets: deletedDb.count,
+            deletedDraftStorageObjects: deletedStorageObjects,
+          },
+        },
+      });
+    } catch {
+      // Ignore audit failures.
+    }
+  }
+
+  return {
+    checkedDraftAssets: stale.length,
+    deletedDraftAssets: deletedDb.count,
+    deletedDraftStorageObjects: deletedStorageObjects,
+  } satisfies DraftCleanupResult;
+}
+
+export async function cleanupStaleDraftAssets(args: { retentionHours: number; limit?: number }) {
+  const retentionMs = Math.max(1, args.retentionHours) * 60 * 60 * 1000;
+  const cutoff = new Date(Date.now() - retentionMs);
+  return cleanupDraftAssetsInternal({
+    cutoff,
+    limit: args.limit ?? 200,
+  });
+}
+
+export async function cleanupStaleDraftAssetsForUser(args: { userId: string; retentionHours: number }) {
+  const retentionMs = Math.max(1, args.retentionHours) * 60 * 60 * 1000;
+  const cutoff = new Date(Date.now() - retentionMs);
+  return cleanupDraftAssetsInternal({
+    cutoff,
+    limit: 40,
+    userId: args.userId,
+    auditAction: "storage.draft_cleanup.user",
+  });
+}
+
+export async function cleanupStaleGeneratedOutputs(args: { retentionDays: number; limit?: number }) {
+  const retentionMs = Math.max(1, args.retentionDays) * 24 * 60 * 60 * 1000;
+  const cutoff = new Date(Date.now() - retentionMs);
+  const stale = await prisma.uploadAsset.findMany({
+    where: {
+      type: "generated_output",
+      createdAt: { lt: cutoff },
+    },
+    orderBy: { createdAt: "asc" },
+    take: Math.max(1, Math.min(2000, args.limit ?? 400)),
+    select: { id: true, userId: true, storageKey: true },
+  });
+
+  if (stale.length === 0) {
+    return {
+      checkedGeneratedAssets: 0,
+      deletedGeneratedAssets: 0,
+      deletedGeneratedStorageObjects: 0,
+    } satisfies GeneratedOutputCleanupResult;
+  }
+
+  const ids = stale.map((x) => x.id);
+  const keys = Array.from(new Set(stale.map((x) => normalizeStorageKey(x.storageKey)).filter((v): v is string => !!v)));
+
+  let deletedStorageObjects = 0;
+  try {
+    const res = await deleteObjects(keys);
+    deletedStorageObjects = res.deleted;
+  } catch {
+    return {
+      checkedGeneratedAssets: stale.length,
+      deletedGeneratedAssets: 0,
+      deletedGeneratedStorageObjects: 0,
+    } satisfies GeneratedOutputCleanupResult;
+  }
+
+  const deleted = await prisma.$transaction(async (db) => {
+    await db.generationJob.updateMany({
+      where: { outputAssetId: { in: ids } },
+      data: { outputAssetId: null, outputKey: null },
+    });
+
+    const delAssets = await db.uploadAsset.deleteMany({ where: { id: { in: ids } } });
+
+    await db.auditLog.create({
+      data: {
+        action: "storage.generated_cleanup",
+        meta: {
+          checkedGeneratedAssets: stale.length,
+          deletedGeneratedAssets: delAssets.count,
+          deletedGeneratedStorageObjects: deletedStorageObjects,
+          retentionDays: Math.max(1, args.retentionDays),
+        },
+      },
+    });
+
+    return delAssets.count;
+  });
+
+  return {
+    checkedGeneratedAssets: stale.length,
+    deletedGeneratedAssets: deleted,
+    deletedGeneratedStorageObjects: deletedStorageObjects,
+  } satisfies GeneratedOutputCleanupResult;
 }

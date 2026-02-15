@@ -7,6 +7,7 @@ import { env } from "@/lib/env";
 import { getRequestIp, rateLimit } from "@/lib/rate-limit";
 import { getUserPlan } from "@/lib/plans";
 import { presignPutObject, sanitizeFileName } from "@/lib/storage/s3";
+import { cleanupStaleDraftAssetsForUser } from "@/lib/purge";
 
 const allowedAudioMime = new Set([
   "audio/wav",
@@ -107,6 +108,11 @@ export async function POST(req: Request) {
   }
 
   if (type === "dataset_audio") {
+    await cleanupStaleDraftAssetsForUser({
+      userId: session.user.id,
+      retentionHours: env.UPLOAD_DRAFT_RETENTION_HOURS,
+    }).catch(() => null);
+
     // Plan quota check for dataset
     const datasetPlanMax = plan === "pro" ? env.UPLOAD_MAX_DATASET_BYTES_PRO : env.UPLOAD_MAX_DATASET_BYTES_FREE;
     const datasetMax = Math.min(datasetPlanMax, DATASET_HARD_MAX_BYTES);
