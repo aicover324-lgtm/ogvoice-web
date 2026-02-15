@@ -108,6 +108,7 @@ model UploadAsset {
   userId         String
   voiceProfileId String?
   type           UploadAssetType
+  isFavorite     Boolean         @default(false)
   fileName       String
   fileSize       Int
   mimeType       String

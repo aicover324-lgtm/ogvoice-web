@@ -1,0 +1,2 @@
+ALTER TABLE "UploadAsset"
+ADD COLUMN "isFavorite" BOOLEAN NOT NULL DEFAULT false;

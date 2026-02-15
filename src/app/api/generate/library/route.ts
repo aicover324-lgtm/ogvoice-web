@@ -14,6 +14,11 @@ const deleteSchema = z.object({
   assetId: z.string().min(1),
 });
 
+const favoriteSchema = z.object({
+  assetId: z.string().min(1),
+  isFavorite: z.boolean(),
+});
+
 export async function PATCH(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return err("UNAUTHORIZED", "Sign in required", 401);
@@ -96,6 +101,43 @@ export async function DELETE(req: Request) {
   ]);
 
   return ok({ deleted: true, assetId: asset.id });
+}
+
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return err("UNAUTHORIZED", "Sign in required", 401);
+
+  const body = await req.json().catch(() => null);
+  const parsed = favoriteSchema.safeParse(body);
+  if (!parsed.success) {
+    return err("INVALID_INPUT", "Invalid favorite payload", 400, parsed.error.flatten());
+  }
+
+  const asset = await prisma.uploadAsset.findFirst({
+    where: {
+      id: parsed.data.assetId,
+      userId: session.user.id,
+      type: "generated_output",
+    },
+    select: { id: true },
+  });
+  if (!asset) return err("NOT_FOUND", "Generated file not found", 404);
+
+  const updated = await prisma.uploadAsset.update({
+    where: { id: asset.id },
+    data: { isFavorite: parsed.data.isFavorite },
+    select: { id: true, isFavorite: true },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      userId: session.user.id,
+      action: "generate.library.favorite",
+      meta: { assetId: updated.id, isFavorite: updated.isFavorite },
+    },
+  });
+
+  return ok({ assetId: updated.id, isFavorite: updated.isFavorite });
 }
 
 export const runtime = "nodejs";

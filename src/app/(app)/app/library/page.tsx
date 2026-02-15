@@ -29,32 +29,40 @@ export default async function LibraryPage({
   const assets = assetIds.length
     ? await prisma.uploadAsset.findMany({
         where: { userId, id: { in: assetIds }, type: "generated_output" },
-        select: { id: true, fileName: true },
+        select: { id: true, fileName: true, isFavorite: true },
       })
     : [];
-  const assetById = new Map(assets.map((a) => [a.id, a.fileName]));
+  const assetById = new Map(assets.map((a) => [a.id, { fileName: a.fileName, isFavorite: a.isFavorite }]));
 
   const initialItems = jobs
     .map((j) => {
       const assetId = j.outputAssetId;
       if (!assetId) return null;
       if (!assetById.has(assetId)) return null;
+      const asset = assetById.get(assetId);
       return {
         jobId: j.id,
         assetId,
-        fileName: assetById.get(assetId) || "converted.wav",
+        fileName: asset?.fileName || "converted.wav",
+        isFavorite: !!asset?.isFavorite,
         voiceId: j.voiceProfile.id,
         voiceName: j.voiceProfile.name,
         createdAt: j.createdAt.toISOString(),
       };
     })
-    .filter((x): x is { jobId: string; assetId: string; fileName: string; voiceId: string; voiceName: string; createdAt: string } => !!x);
+    .filter(
+      (x): x is { jobId: string; assetId: string; fileName: string; isFavorite: boolean; voiceId: string; voiceName: string; createdAt: string } =>
+        !!x
+    );
 
   return (
     <main className="og-app-main">
       <PageHeader title="My Library" />
       <div className="mt-5 md:mt-6">
-        <MyLibraryPanel initialItems={initialItems} initialAutoPlayAssetId={typeof params.playAssetId === "string" ? params.playAssetId : null} />
+        <MyLibraryPanel
+          initialItems={initialItems}
+          initialAutoPlayAssetId={typeof params.playAssetId === "string" ? params.playAssetId : null}
+        />
       </div>
     </main>
   );
