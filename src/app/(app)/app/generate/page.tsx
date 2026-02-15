@@ -28,8 +28,12 @@ export default async function GeneratePage({
         errorMessage: true,
         inputAssetId: true,
         outputAssetId: true,
+        pitch: true,
+        searchFeatureRatio: true,
+        addBackVocals: true,
+        backingVocalMode: true,
         createdAt: true,
-        voiceProfile: { select: { name: true } },
+        voiceProfile: { select: { id: true, name: true } },
       },
     }),
   ]);
@@ -51,9 +55,14 @@ export default async function GeneratePage({
     errorMessage: j.errorMessage,
     createdAt: j.createdAt.toISOString(),
     voiceName: j.voiceProfile.name,
+    voiceId: j.voiceProfile.id,
     inputLabel: j.inputAssetId ? assetById.get(j.inputAssetId) || "Singing record" : "Singing record",
     outputAssetId: j.outputAssetId,
     outputFileName: j.outputAssetId ? assetById.get(j.outputAssetId) || "converted.wav" : null,
+    pitch: j.pitch,
+    searchFeatureRatio: j.searchFeatureRatio,
+    addBackVocals: j.addBackVocals,
+    backingVocalMode: j.backingVocalMode,
   }));
 
   const requestedVoiceId = typeof params.voiceId === "string" ? params.voiceId : null;

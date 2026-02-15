@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import {
+  Archive,
   Check,
   Download,
   FileAudio,
@@ -58,6 +59,7 @@ export function MyLibraryPanel({
   const [savingAssetId, setSavingAssetId] = React.useState<string | null>(null);
   const [deletingAssetId, setDeletingAssetId] = React.useState<string | null>(null);
   const [batchDeleting, setBatchDeleting] = React.useState(false);
+  const [zipExporting, setZipExporting] = React.useState(false);
   const [focusedAssetId, setFocusedAssetId] = React.useState<string | null>(null);
 
   const [tab, setTab] = React.useState<TabKey>("all");
@@ -350,6 +352,45 @@ export function MyLibraryPanel({
     toast.success(`Download started for ${ids.length} track(s).`);
   }
 
+  async function exportSelectedAsZip() {
+    const ids = Array.from(selectedAssetIds).filter((id) => items.some((item) => item.assetId === id));
+    if (ids.length === 0) return;
+
+    setZipExporting(true);
+    try {
+      const res = await fetch("/api/generate/library/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assetIds: ids }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error?.message || "Could not export ZIP.");
+      }
+
+      const blob = await res.blob();
+      const contentDisposition = res.headers.get("content-disposition") || "";
+      const fileNameMatch = contentDisposition.match(/filename="([^"]+)"/i);
+      const fileName = fileNameMatch?.[1] || `og-voice-library-${Date.now()}.zip`;
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 12000);
+
+      toast.success(`ZIP export is ready (${ids.length} track(s)).`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not export ZIP.");
+    } finally {
+      setZipExporting(false);
+    }
+  }
+
   function playItem(item: LibraryItem) {
     void toggleTrack(toMediaTrack(item), playQueueTracks);
   }
@@ -494,10 +535,23 @@ export function MyLibraryPanel({
             variant="outline"
             className="rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer"
             onClick={downloadSelected}
-            disabled={selectedAssetIds.size === 0}
+            disabled={selectedAssetIds.size === 0 || zipExporting}
           >
             <Download className="mr-1.5 h-3.5 w-3.5" />
             Download Selected
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="rounded-full border-cyan-300/35 bg-cyan-500/10 text-cyan-100 hover:bg-cyan-500/20 cursor-pointer"
+            onClick={() => {
+              void exportSelectedAsZip();
+            }}
+            disabled={selectedAssetIds.size === 0 || zipExporting || batchDeleting}
+          >
+            {zipExporting ? <LoaderCircle className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Archive className="mr-1.5 h-3.5 w-3.5" />}
+            Export ZIP
           </Button>
           <Button
             type="button"

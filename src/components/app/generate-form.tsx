@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2, ChevronDown, CloudUpload, Download, LoaderCircle, Mic, PlusCircle, Share2, Square, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, CloudUpload, Download, History, LoaderCircle, Mic, PlusCircle, Share2, Square, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,10 +27,15 @@ type QueueItem = {
   progress: number;
   errorMessage?: string | null;
   createdAt: string;
+  voiceId: string;
   voiceName: string;
   inputLabel: string;
   outputAssetId?: string | null;
   outputFileName?: string | null;
+  pitch: number;
+  searchFeatureRatio: number;
+  addBackVocals: boolean;
+  backingVocalMode: "do_not_convert" | "convert";
 };
 
 type UploadPanelState = {
@@ -211,8 +216,13 @@ export function GenerateForm({
         status: "queued",
         progress: 0,
         createdAt: new Date().toISOString(),
+        voiceId: voiceProfileId,
         voiceName: selectedVoice?.name || "Cloned voice",
         inputLabel: inputFileName || "Song",
+        pitch,
+        searchFeatureRatio,
+        addBackVocals,
+        backingVocalMode: backVocalMode,
       },
       ...prev.filter((p) => p.id !== nextJobId),
     ]);
@@ -466,6 +476,23 @@ export function GenerateForm({
     return queue.find((item) => item.status === "queued" || item.status === "running") || null;
   }, [jobId, queue]);
   const conversionProgress = Math.max(0, Math.min(100, activeConversionItem?.progress ?? 0));
+
+  const presetHistory = React.useMemo(() => {
+    return queue
+      .filter((item) => typeof item.pitch === "number" && typeof item.searchFeatureRatio === "number")
+      .slice(0, 8);
+  }, [queue]);
+
+  function applyPreset(item: QueueItem) {
+    if (voices.some((voice) => voice.id === item.voiceId)) {
+      setVoiceProfileId(item.voiceId);
+    }
+    setPitch(item.pitch);
+    setSearchFeatureRatio(item.searchFeatureRatio);
+    setAddBackVocals(item.addBackVocals);
+    setBackVocalMode(item.backingVocalMode);
+    toast.success("Preset applied from history.");
+  }
 
   return (
     <div className="space-y-6">
@@ -768,6 +795,43 @@ export function GenerateForm({
           <h3 className="flex items-center gap-2 text-xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
             Voice Style
           </h3>
+
+          <div className="mt-4 rounded-xl border border-white/10 bg-[#101a35] p-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+              <History className="h-4 w-4 text-cyan-300" />
+              Generation History + Preset
+            </div>
+            {presetHistory.length > 0 ? (
+              <div className="mt-3 space-y-2">
+                {presetHistory.map((item) => (
+                  <div key={`preset-${item.id}`} className="rounded-lg border border-white/10 bg-white/5 p-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate text-xs font-semibold text-slate-100">{item.inputLabel}</div>
+                        <div className="truncate text-[11px] text-slate-400">{item.voiceName} • {formatHistoryTime(item.createdAt)}</div>
+                        <div className="mt-1 text-[11px] text-slate-400">
+                          Pitch {item.pitch > 0 ? `+${item.pitch}` : item.pitch} • Strength {item.searchFeatureRatio.toFixed(2)} • {item.addBackVocals ? (item.backingVocalMode === "convert" ? "Back vocals: convert" : "Back vocals: keep") : "Back vocals: off"}
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="cursor-pointer rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10"
+                        onClick={() => applyPreset(item)}
+                      >
+                        Use preset
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-2 text-xs text-slate-400">
+                No previous generations yet. Start one cover to create reusable presets.
+              </div>
+            )}
+          </div>
 
           <div className="mt-6 grid gap-7 md:grid-cols-2">
             <div>
@@ -1178,6 +1242,12 @@ function formatClock(sec: number) {
   const m = Math.floor(safe / 60);
   const s = safe % 60;
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function formatHistoryTime(iso: string) {
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return "Unknown time";
+  return d.toLocaleString();
 }
 
 function draggedAudioState(dt: DataTransfer): "valid" | "invalid" | "unknown" {

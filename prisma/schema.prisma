@@ -27,6 +27,11 @@ enum PlanTier {
   pro
 }
 
+enum BackingVocalMode {
+  do_not_convert
+  convert
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -164,6 +169,10 @@ model GenerationJob {
   userId         String
   voiceProfileId String
   inputAssetId   String?
+  pitch          Int       @default(0)
+  searchFeatureRatio Float @default(0.75)
+  addBackVocals  Boolean   @default(false)
+  backingVocalMode BackingVocalMode @default(do_not_convert)
   runpodRequestId String?
   outputKey      String?
   status         JobStatus @default(queued)
