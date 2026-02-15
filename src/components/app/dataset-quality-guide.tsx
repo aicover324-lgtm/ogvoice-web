@@ -19,7 +19,7 @@ type QualityExample = {
 const EXAMPLES: QualityExample[] = [
   {
     id: "clean",
-    title: "Correct Dataset (Recommended)",
+    title: "Correct Voice (Recommended)",
     description: "Clean.wav: clear single vocal, low noise, no reverb, no background music.",
     kind: "good",
     src: "/dataset-quality-audio/Clean.wav",
@@ -36,7 +36,7 @@ const EXAMPLES: QualityExample[] = [
   {
     id: "back-vocals",
     title: "Wrong: Back Vocals Present",
-    description: "Back_Vocals.wav: extra singers overlap with the main voice and confuse training.",
+    description: "Back_Vocals.wav: extra singers overlap with the main voice and confuse cloning.",
     kind: "bad",
     src: "/dataset-quality-audio/Back_Vocals.wav",
     bars: buildBars(0.92, 0.3, 0.47),
@@ -59,7 +59,7 @@ export function DatasetQualityGuide() {
     <PremiumCard className="border-white/10 bg-[#101b37] p-5 text-slate-100" ringClassName="ring-white/10">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-slate-100" style={{ fontFamily: "var(--font-heading)" }}>
-          Dataset Quality Guide
+          Voice Quality Guide
         </h3>
         <Badge variant="outline" className="border-cyan-300/40 bg-cyan-400/10 text-cyan-200">
           Real Examples

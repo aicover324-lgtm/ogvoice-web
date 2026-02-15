@@ -176,94 +176,99 @@ export function NewVoiceProfilePage() {
         </div>
       </section>
 
-      <form ref={formRef} onSubmit={createVoice} className="mt-6">
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-          <div className="space-y-4">
-            <DatasetQualityGuide />
+      <form ref={formRef} onSubmit={createVoice} className="mt-6 space-y-5">
+        <DatasetQualityGuide />
 
-            <DraftDatasetUploaderWithReplace
-              key={`voice-${resetKey}`}
-              title="1. Singing Record"
-              onDraftChange={(asset) => {
-                setDatasetAssetId(asset?.id ?? null);
-              }}
-            />
+        <div className="grid items-stretch gap-4 xl:grid-cols-3">
+          <DraftDatasetUploaderWithReplace
+            key={`voice-${resetKey}`}
+            className="h-full xl:min-h-[620px]"
+            title="1. Singing Record"
+            onDraftChange={(asset) => {
+              setDatasetAssetId(asset?.id ?? null);
+            }}
+          />
 
-            <PremiumCard className="border-white/10 bg-[#101b37] p-5 text-slate-100" ringClassName="ring-white/10">
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
-                    2. Cover Image
-                  </div>
-                  <Badge
-                    variant={coverAssetId ? "secondary" : "outline"}
-                    className={coverAssetId ? "bg-white/10 text-slate-100" : "border-white/20 text-slate-300"}
-                  >
-                    {coverAssetId ? "Uploaded" : "Optional"}
-                  </Badge>
-                </div>
-                <div className="mt-3 grid gap-3">
-                  <ImageUploader
-                    key={`cover-${resetKey}`}
-                    type="voice_cover_image"
-                    trigger="frame"
-                    frameHint="Drag and drop an image, or click to upload."
-                    footerHint={null}
-                    preview={{
-                      src: "/api/uploads/draft-cover/image",
-                      alt: "Cover",
-                      variant: "cover",
-                      width: "100%",
-                      aspectRatio: "1 / 1",
-                    }}
-                    onAssetCreated={(asset) => setCoverAssetId(asset.id)}
-                  />
-                  <div className="text-xs text-slate-400">Accepted: JPG, PNG, WEBP</div>
-                </div>
-              </div>
-            </PremiumCard>
-          </div>
-
-          <div className="space-y-4">
-            <PremiumCard className="border-white/10 bg-[#101b37] p-5 text-slate-100" ringClassName="ring-white/10">
-              <div>
+          <PremiumCard className="h-full border-white/10 bg-[#101b37] p-5 text-slate-100 xl:min-h-[620px]" ringClassName="ring-white/10">
+            <div className="flex h-full flex-col">
+              <div className="flex items-center justify-between">
                 <div className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
-                  3. Voice Details
+                  2. Cover Image
                 </div>
-                <div className="mt-4 grid gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="name" className="text-slate-200">Voice name</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      placeholder="e.g., Studio Vocal - English"
-                      required
-                      className="border-white/15 bg-white/5 text-slate-100 placeholder:text-slate-400"
-                      onInput={(e) => setNameValue((e.target as HTMLInputElement).value)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="language" className="text-slate-200">Language (optional)</Label>
-                    <Input
-                      id="language"
-                      name="language"
-                      placeholder="e.g., en"
-                      className="border-white/15 bg-white/5 text-slate-100 placeholder:text-slate-400"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="description" className="text-slate-200">Notes (optional)</Label>
-                    <Textarea
-                      id="description"
-                      name="description"
-                      placeholder="Mic, room, style, tips..."
-                      className="min-h-28 border-white/15 bg-white/5 text-slate-100 placeholder:text-slate-400"
-                    />
-                  </div>
+                <Badge
+                  variant={coverAssetId ? "secondary" : "outline"}
+                  className={coverAssetId ? "bg-white/10 text-slate-100" : "border-white/20 text-slate-300"}
+                >
+                  {coverAssetId ? "Uploaded" : "Optional"}
+                </Badge>
+              </div>
+
+              <div className="mt-3 grid flex-1 content-start gap-3">
+                <ImageUploader
+                  key={`cover-${resetKey}`}
+                  type="voice_cover_image"
+                  trigger="frame"
+                  frameHint="Drag and drop an image, or click to upload."
+                  footerHint={null}
+                  preview={{
+                    src: "/api/uploads/draft-cover/image",
+                    alt: "Cover",
+                    variant: "cover",
+                    width: "100%",
+                    aspectRatio: "1 / 1",
+                  }}
+                  onAssetCreated={(asset) => setCoverAssetId(asset.id)}
+                />
+                <div className="text-xs text-slate-400">Accepted: JPG, PNG, WEBP</div>
+              </div>
+            </div>
+          </PremiumCard>
+
+          <PremiumCard className="h-full border-white/10 bg-[#101b37] p-5 text-slate-100 xl:min-h-[620px]" ringClassName="ring-white/10">
+            <div className="flex h-full flex-col">
+              <div className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
+                3. Voice Details
+              </div>
+
+              <div className="mt-4 grid flex-1 content-start gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name" className="text-slate-200">Voice name</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    placeholder="e.g., Studio Vocal - English"
+                    required
+                    className="border-white/15 bg-white/5 text-slate-100 placeholder:text-slate-400"
+                    onInput={(e) => setNameValue((e.target as HTMLInputElement).value)}
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="language" className="text-slate-200">Language (optional)</Label>
+                  <Input
+                    id="language"
+                    name="language"
+                    placeholder="e.g., en"
+                    className="border-white/15 bg-white/5 text-slate-100 placeholder:text-slate-400"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="description" className="text-slate-200">Notes (optional)</Label>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    placeholder="Mic, room, style, tips..."
+                    className="min-h-28 border-white/15 bg-white/5 text-slate-100 placeholder:text-slate-400"
+                  />
                 </div>
               </div>
-            </PremiumCard>
+            </div>
+          </PremiumCard>
+        </div>
 
+        <div className="pt-2">
+          <div className="mx-auto w-full max-w-xl">
             <PremiumCard className="border-white/10 bg-[#101b37] p-5 text-slate-100" ringClassName="ring-white/10">
               <div className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)" }}>
                 Ready Check
