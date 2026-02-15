@@ -38,10 +38,16 @@ export async function presignPutObject(args: {
   return url;
 }
 
-export async function presignGetObject(args: { key: string }) {
+export async function presignGetObject(args: { key: string; downloadFileName?: string }) {
+  const safeName = args.downloadFileName ? sanitizeFileName(args.downloadFileName) : null;
   const cmd = new GetObjectCommand({
     Bucket: env.S3_BUCKET,
     Key: args.key,
+    ...(safeName
+      ? {
+          ResponseContentDisposition: `attachment; filename="${safeName}"`,
+        }
+      : {}),
   });
   const url = await getSignedUrl(s3, cmd, { expiresIn: 60 * 10 });
   return url;

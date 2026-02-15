@@ -5,6 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   FileAudio,
+  GripHorizontal,
+  Maximize2,
+  Minimize2,
   Pause,
   Play,
   Repeat,
@@ -26,6 +29,10 @@ export type GlobalMediaTrack = {
 };
 
 type RepeatMode = "off" | "all" | "one";
+type DockPosition = { x: number; y: number };
+
+const PLAYER_MINIMIZED_STORAGE_KEY = "ogvoice.player.minimized";
+const PLAYER_DOCK_POSITION_STORAGE_KEY = "ogvoice.player.dockPosition";
 
 type GlobalMediaPlayerContextValue = {
   activeTrack: GlobalMediaTrack | null;
@@ -54,6 +61,10 @@ export function GlobalMediaPlayerProvider({ children }: { children: React.ReactN
   const [queue, setQueue] = React.useState<GlobalMediaTrack[]>([]);
   const [shuffleEnabled, setShuffleEnabled] = React.useState(false);
   const [repeatMode, setRepeatMode] = React.useState<RepeatMode>("off");
+  const [isMinimized, setIsMinimized] = React.useState(false);
+  const [isDraggingDock, setIsDraggingDock] = React.useState(false);
+  const [dockPosition, setDockPosition] = React.useState<DockPosition | null>(null);
+  const [prefsHydrated, setPrefsHydrated] = React.useState(false);
   const [endedTick, setEndedTick] = React.useState(0);
 
   const [currentTime, setCurrentTime] = React.useState(0);
@@ -64,10 +75,63 @@ export function GlobalMediaPlayerProvider({ children }: { children: React.ReactN
 
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const activeTrackRef = React.useRef<GlobalMediaTrack | null>(null);
+  const dockRef = React.useRef<HTMLDivElement | null>(null);
+  const dragRef = React.useRef<{ offsetX: number; offsetY: number } | null>(null);
 
   React.useEffect(() => {
     activeTrackRef.current = activeTrack;
   }, [activeTrack]);
+
+  React.useEffect(() => {
+    try {
+      const minimizedRaw = window.localStorage.getItem(PLAYER_MINIMIZED_STORAGE_KEY);
+      if (minimizedRaw === "1") {
+        setIsMinimized(true);
+      }
+
+      const posRaw = window.localStorage.getItem(PLAYER_DOCK_POSITION_STORAGE_KEY);
+      if (posRaw) {
+        const parsed = JSON.parse(posRaw) as unknown;
+        if (
+          typeof parsed === "object" &&
+          parsed !== null &&
+          typeof (parsed as { x?: unknown }).x === "number" &&
+          typeof (parsed as { y?: unknown }).y === "number"
+        ) {
+          setDockPosition({
+            x: (parsed as { x: number }).x,
+            y: (parsed as { y: number }).y,
+          });
+        }
+      }
+    } catch {
+      // no-op
+    } finally {
+      setPrefsHydrated(true);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (!prefsHydrated) return;
+    try {
+      window.localStorage.setItem(PLAYER_MINIMIZED_STORAGE_KEY, isMinimized ? "1" : "0");
+    } catch {
+      // no-op
+    }
+  }, [isMinimized, prefsHydrated]);
+
+  React.useEffect(() => {
+    if (!prefsHydrated) return;
+    try {
+      if (!dockPosition) {
+        window.localStorage.removeItem(PLAYER_DOCK_POSITION_STORAGE_KEY);
+        return;
+      }
+      window.localStorage.setItem(PLAYER_DOCK_POSITION_STORAGE_KEY, JSON.stringify(dockPosition));
+    } catch {
+      // no-op
+    }
+  }, [dockPosition, prefsHydrated]);
 
   const ensureAssetUrl = React.useCallback(
     async (assetId: string) => {
@@ -221,7 +285,81 @@ export function GlobalMediaPlayerProvider({ children }: { children: React.ReactN
     setCurrentTime(0);
     setDuration(0);
     setQueue([]);
+    setIsMinimized(false);
+    setIsDraggingDock(false);
+    setDockPosition(null);
   }, []);
+
+  const positionDockWithinViewport = React.useCallback((next: DockPosition) => {
+    const width = dockRef.current?.offsetWidth ?? 360;
+    const height = dockRef.current?.offsetHeight ?? 88;
+    const margin = 10;
+    const topInset = 68;
+    const leftInset = window.innerWidth >= 768 ? 288 : 0;
+
+    const minX = leftInset + margin;
+    const maxX = Math.max(minX, window.innerWidth - width - margin);
+    const minY = topInset;
+    const maxY = Math.max(minY, window.innerHeight - height - margin);
+
+    return {
+      x: Math.min(Math.max(next.x, minX), maxX),
+      y: Math.min(Math.max(next.y, minY), maxY),
+    };
+  }, []);
+
+  const placeDockDefault = React.useCallback(() => {
+    const width = dockRef.current?.offsetWidth ?? 360;
+    const height = dockRef.current?.offsetHeight ?? 88;
+    const margin = 14;
+    const leftInset = window.innerWidth >= 768 ? 288 : 0;
+    const start: DockPosition = {
+      x: Math.max(leftInset + margin, window.innerWidth - width - margin),
+      y: Math.max(80, window.innerHeight - height - margin),
+    };
+    setDockPosition(positionDockWithinViewport(start));
+  }, [positionDockWithinViewport]);
+
+  const endDockDrag = React.useCallback(() => {
+    dragRef.current = null;
+    setIsDraggingDock(false);
+  }, []);
+
+  const onDockPointerMove = React.useCallback(
+    (event: PointerEvent) => {
+      if (!dragRef.current) return;
+      const next = {
+        x: event.clientX - dragRef.current.offsetX,
+        y: event.clientY - dragRef.current.offsetY,
+      };
+      setDockPosition(positionDockWithinViewport(next));
+    },
+    [positionDockWithinViewport]
+  );
+
+  const onDockPointerUp = React.useCallback(() => {
+    window.removeEventListener("pointermove", onDockPointerMove);
+    window.removeEventListener("pointerup", onDockPointerUp);
+    endDockDrag();
+  }, [endDockDrag, onDockPointerMove]);
+
+  const beginDockDrag = React.useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!dockRef.current) return;
+      const target = event.target as HTMLElement;
+      if (target.closest("button, a, input, textarea, select")) return;
+
+      const rect = dockRef.current.getBoundingClientRect();
+      dragRef.current = {
+        offsetX: event.clientX - rect.left,
+        offsetY: event.clientY - rect.top,
+      };
+      setIsDraggingDock(true);
+      window.addEventListener("pointermove", onDockPointerMove);
+      window.addEventListener("pointerup", onDockPointerUp);
+    },
+    [onDockPointerMove, onDockPointerUp]
+  );
 
   function seekTo(percent: number) {
     const audio = audioRef.current;
@@ -395,6 +533,37 @@ export function GlobalMediaPlayerProvider({ children }: { children: React.ReactN
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [playNeighbor, playTrack, queue, toggleCurrentPlayback]);
 
+  React.useEffect(() => {
+    if (!activeTrack || !isMinimized) return;
+    const t = window.setTimeout(() => {
+      if (dockPosition) {
+        setDockPosition((prev) => (prev ? positionDockWithinViewport(prev) : prev));
+      } else {
+        placeDockDefault();
+      }
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [activeTrack, dockPosition, isMinimized, placeDockDefault, positionDockWithinViewport]);
+
+  React.useEffect(() => {
+    if (!isMinimized) return;
+    const onResize = () => {
+      setDockPosition((prev) => {
+        if (!prev) return prev;
+        return positionDockWithinViewport(prev);
+      });
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [isMinimized, positionDockWithinViewport]);
+
+  React.useEffect(() => {
+    return () => {
+      window.removeEventListener("pointermove", onDockPointerMove);
+      window.removeEventListener("pointerup", onDockPointerUp);
+    };
+  }, [onDockPointerMove, onDockPointerUp]);
+
   const activeQueueIndex = React.useMemo(() => {
     if (!activeTrack) return -1;
     return queue.findIndex((item) => item.assetId === activeTrack.assetId);
@@ -424,50 +593,257 @@ export function GlobalMediaPlayerProvider({ children }: { children: React.ReactN
       {children}
 
       {activeTrack ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-3 z-50 px-2 md:left-72 md:px-4">
-          <div className="mx-auto w-full max-w-6xl pointer-events-auto overflow-hidden rounded-2xl border border-cyan-300/20 bg-[linear-gradient(120deg,rgba(8,15,36,0.95)_0%,rgba(14,24,54,0.95)_45%,rgba(26,18,52,0.95)_100%)] shadow-[0_18px_70px_rgba(2,8,23,0.55)] backdrop-blur-xl">
-            <div className="grid gap-3 p-3 md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.3fr)_minmax(0,0.9fr)] md:items-center md:p-4">
-              <div className="flex min-w-0 items-center gap-3">
-                <MiniVoiceCover voiceId={activeTrack.voiceId} alt={activeTrack.voiceName} />
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold text-slate-100">{activeTrack.fileName}</div>
-                  <div className="mt-0.5 truncate text-xs text-slate-300">{activeTrack.voiceName}</div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] uppercase tracking-[0.1em] text-slate-400">
-                    {activeQueueIndex >= 0 ? <span>Queue {activeQueueIndex + 1}/{queue.length}</span> : null}
-                    <span>{shuffleEnabled ? "Shuffle On" : "Shuffle Off"}</span>
-                    <span>{repeatLabel}</span>
-                    <span className="text-slate-500">Space / ← / →</span>
-                  </div>
+        isMinimized ? (
+          <div
+            ref={dockRef}
+            className={
+              "fixed z-50 w-[min(92vw,360px)] overflow-hidden rounded-2xl border border-cyan-300/25 bg-[linear-gradient(120deg,rgba(8,15,36,0.95)_0%,rgba(14,24,54,0.95)_45%,rgba(26,18,52,0.95)_100%)] shadow-[0_18px_70px_rgba(2,8,23,0.55)] backdrop-blur-xl " +
+              (isDraggingDock ? "cursor-grabbing" : "cursor-grab")
+            }
+            style={
+              dockPosition
+                ? { left: dockPosition.x, top: dockPosition.y }
+                : { right: 14, bottom: 14 }
+            }
+            onPointerDown={beginDockDrag}
+          >
+            <div className="flex items-center gap-2 border-b border-white/10 px-3 py-1.5 text-[10px] uppercase tracking-[0.1em] text-slate-400">
+              <GripHorizontal className="h-3.5 w-3.5" />
+              Drag Player
+              <span className="ml-auto">{playingAssetId === activeTrack.assetId ? "Playing" : "Paused"}</span>
+            </div>
+
+            <div className="flex items-center gap-2.5 px-3 py-2.5">
+              <MiniVoiceCover voiceId={activeTrack.voiceId} alt={activeTrack.voiceName} />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs font-semibold text-slate-100">{activeTrack.fileName}</div>
+                <div className="truncate text-[11px] text-slate-300">{activeTrack.voiceName}</div>
+                <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/15">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-sky-400 to-fuchsia-400"
+                    style={{ width: `${progress}%` }}
+                  />
                 </div>
-                <Badge
-                  variant="outline"
-                  className={
-                    "ml-auto shrink-0 " +
-                    (playingAssetId === activeTrack.assetId
-                      ? "border-emerald-300/45 bg-emerald-400/12 text-emerald-200"
-                      : "border-white/20 bg-white/10 text-slate-200")
-                  }
-                >
-                  {playingAssetId === activeTrack.assetId ? "Now Playing" : "Paused"}
-                </Badge>
               </div>
 
-              <div>
-                <div className="flex items-center justify-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-full border-cyan-300/30 bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25 cursor-pointer"
+                onClick={() => {
+                  void toggleCurrentPlayback();
+                }}
+                aria-label={playingAssetId === activeTrack.assetId ? "Pause" : "Play"}
+              >
+                {playingAssetId === activeTrack.assetId ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer"
+                onClick={() => setIsMinimized(false)}
+                aria-label="Expand player"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer"
+                onClick={closePlayer}
+                aria-label="Close player"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="pointer-events-none fixed inset-x-0 bottom-3 z-50 px-2 md:left-72 md:px-4">
+            <div className="mx-auto w-full max-w-6xl pointer-events-auto overflow-hidden rounded-2xl border border-cyan-300/20 bg-[linear-gradient(120deg,rgba(8,15,36,0.95)_0%,rgba(14,24,54,0.95)_45%,rgba(26,18,52,0.95)_100%)] shadow-[0_18px_70px_rgba(2,8,23,0.55)] backdrop-blur-xl">
+              <div className="grid gap-3 p-3 md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.3fr)_minmax(0,0.9fr)] md:items-center md:p-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <MiniVoiceCover voiceId={activeTrack.voiceId} alt={activeTrack.voiceName} />
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold text-slate-100">{activeTrack.fileName}</div>
+                    <div className="mt-0.5 truncate text-xs text-slate-300">{activeTrack.voiceName}</div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] uppercase tracking-[0.1em] text-slate-400">
+                      {activeQueueIndex >= 0 ? <span>Queue {activeQueueIndex + 1}/{queue.length}</span> : null}
+                      <span>{shuffleEnabled ? "Shuffle On" : "Shuffle Off"}</span>
+                      <span>{repeatLabel}</span>
+                      <span className="text-slate-500">Space / ← / →</span>
+                    </div>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={
+                      "ml-auto shrink-0 " +
+                      (playingAssetId === activeTrack.assetId
+                        ? "border-emerald-300/45 bg-emerald-400/12 text-emerald-200"
+                        : "border-white/20 bg-white/10 text-slate-200")
+                    }
+                  >
+                    {playingAssetId === activeTrack.assetId ? "Now Playing" : "Paused"}
+                  </Badge>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className={
+                        "h-8 w-8 rounded-full border transition-colors cursor-pointer " +
+                        (shuffleEnabled
+                          ? "border-cyan-300/50 bg-cyan-500/20 text-cyan-100 hover:bg-cyan-500/30"
+                          : "border-white/20 bg-white/5 text-slate-100 hover:bg-white/10")
+                      }
+                      onClick={() => setShuffleEnabled((prev) => !prev)}
+                      aria-label={shuffleEnabled ? "Disable shuffle" : "Enable shuffle"}
+                    >
+                      <Shuffle className="h-4 w-4" />
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8 rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer"
+                      onClick={() => {
+                        void playNeighbor(-1);
+                      }}
+                      disabled={queue.length < 2 && !activeTrack}
+                      aria-label="Previous track"
+                    >
+                      <SkipBack className="h-4 w-4" />
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-11 w-11 rounded-full border-cyan-300/40 bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25 cursor-pointer"
+                      onClick={() => {
+                        void toggleCurrentPlayback();
+                      }}
+                      aria-label={playingAssetId === activeTrack.assetId ? "Pause" : "Play"}
+                    >
+                      {playingAssetId === activeTrack.assetId ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8 rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer"
+                      onClick={() => {
+                        void playNeighbor(1);
+                      }}
+                      disabled={queue.length < 2 && !activeTrack}
+                      aria-label="Next track"
+                    >
+                      <SkipForward className="h-4 w-4" />
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className={
+                        "h-8 w-8 rounded-full border transition-colors cursor-pointer " +
+                        (repeatMode === "off"
+                          ? "border-white/20 bg-white/5 text-slate-100 hover:bg-white/10"
+                          : "border-fuchsia-300/50 bg-fuchsia-500/18 text-fuchsia-100 hover:bg-fuchsia-500/28")
+                      }
+                      onClick={cycleRepeatMode}
+                      aria-label={`Repeat mode: ${repeatMode}`}
+                    >
+                      {repeatMode === "one" ? <Repeat1 className="h-4 w-4" /> : <Repeat className="h-4 w-4" />}
+                    </Button>
+                  </div>
+
+                  <div className="mt-2 flex items-center gap-2 text-[11px] text-slate-300">
+                    <span className="w-10 shrink-0 text-right tabular-nums">{formatTime(currentTime)}</span>
+                    <div className="relative h-2.5 w-full min-w-0">
+                      <div className="absolute inset-0 rounded-full bg-white/15" />
+                      <div
+                        className="pointer-events-none absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-400 via-sky-400 to-fuchsia-400 shadow-[0_0_14px_rgba(34,211,238,0.4)]"
+                        style={{ width: `${progress}%` }}
+                      />
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={0.1}
+                        value={progress}
+                        onChange={(e) => seekTo(Number(e.target.value))}
+                        aria-label="Seek"
+                        className="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0"
+                      />
+                    </div>
+                    <span className="w-10 shrink-0 tabular-nums">{formatTime(duration)}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={toggleMute}
+                    className="grid h-8 w-8 place-items-center rounded-full border border-white/15 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer"
+                    aria-label={muted ? "Unmute" : "Mute"}
+                  >
+                    {muted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                  </button>
+
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={muted ? 0 : volume}
+                    onChange={(e) => changeVolume(Number(e.target.value))}
+                    className="h-1.5 w-20 cursor-pointer appearance-none rounded-full bg-white/20 accent-fuchsia-300"
+                    aria-label="Volume"
+                  />
+
+                  <fieldset
+                    aria-label="Playback speed"
+                    className="inline-flex shrink-0 items-center overflow-hidden rounded-full border border-white/15 bg-white/[0.06] p-0.5"
+                  >
+                    {([0.75, 1, 1.25] as const).map((rate) => {
+                      const activeRate = Math.abs(playbackRate - rate) < 0.001;
+                      return (
+                        <button
+                          key={rate}
+                          type="button"
+                          onClick={() => changePlaybackRate(rate)}
+                          className={
+                            "h-7 min-w-[42px] rounded-full px-2 text-[11px] font-semibold cursor-pointer transition-colors " +
+                            (activeRate
+                              ? "bg-cyan-500/30 text-cyan-100"
+                              : "text-slate-200 hover:bg-white/10")
+                          }
+                        >
+                          {rate}x
+                        </button>
+                      );
+                    })}
+                  </fieldset>
+
                   <Button
                     type="button"
                     variant="outline"
                     size="icon"
-                    className={
-                      "h-8 w-8 rounded-full border transition-colors cursor-pointer " +
-                      (shuffleEnabled
-                        ? "border-cyan-300/50 bg-cyan-500/20 text-cyan-100 hover:bg-cyan-500/30"
-                        : "border-white/20 bg-white/5 text-slate-100 hover:bg-white/10")
-                    }
-                    onClick={() => setShuffleEnabled((prev) => !prev)}
-                    aria-label={shuffleEnabled ? "Disable shuffle" : "Enable shuffle"}
+                    className="h-8 w-8 rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer"
+                    onClick={() => setIsMinimized(true)}
+                    aria-label="Minimize player"
                   >
-                    <Shuffle className="h-4 w-4" />
+                    <Minimize2 className="h-4 w-4" />
                   </Button>
 
                   <Button
@@ -475,141 +851,16 @@ export function GlobalMediaPlayerProvider({ children }: { children: React.ReactN
                     variant="outline"
                     size="icon"
                     className="h-8 w-8 rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer"
-                    onClick={() => {
-                      void playNeighbor(-1);
-                    }}
-                    disabled={queue.length < 2 && !activeTrack}
-                    aria-label="Previous track"
+                    onClick={closePlayer}
+                    aria-label="Close player"
                   >
-                    <SkipBack className="h-4 w-4" />
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-11 w-11 rounded-full border-cyan-300/40 bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25 cursor-pointer"
-                    onClick={() => {
-                      void toggleCurrentPlayback();
-                    }}
-                    aria-label={playingAssetId === activeTrack.assetId ? "Pause" : "Play"}
-                  >
-                    {playingAssetId === activeTrack.assetId ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8 rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer"
-                    onClick={() => {
-                      void playNeighbor(1);
-                    }}
-                    disabled={queue.length < 2 && !activeTrack}
-                    aria-label="Next track"
-                  >
-                    <SkipForward className="h-4 w-4" />
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className={
-                      "h-8 w-8 rounded-full border transition-colors cursor-pointer " +
-                      (repeatMode === "off"
-                        ? "border-white/20 bg-white/5 text-slate-100 hover:bg-white/10"
-                        : "border-fuchsia-300/50 bg-fuchsia-500/18 text-fuchsia-100 hover:bg-fuchsia-500/28")
-                    }
-                    onClick={cycleRepeatMode}
-                    aria-label={`Repeat mode: ${repeatMode}`}
-                  >
-                    {repeatMode === "one" ? <Repeat1 className="h-4 w-4" /> : <Repeat className="h-4 w-4" />}
+                    <X className="h-4 w-4" />
                   </Button>
                 </div>
-
-                <div className="mt-2 flex items-center gap-2 text-[11px] text-slate-300">
-                  <span className="w-10 shrink-0 text-right tabular-nums">{formatTime(currentTime)}</span>
-                  <div className="relative h-2.5 w-full min-w-0">
-                    <div className="absolute inset-0 rounded-full bg-white/15" />
-                    <div
-                      className="pointer-events-none absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-400 via-sky-400 to-fuchsia-400 shadow-[0_0_14px_rgba(34,211,238,0.4)]"
-                      style={{ width: `${progress}%` }}
-                    />
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      step={0.1}
-                      value={progress}
-                      onChange={(e) => seekTo(Number(e.target.value))}
-                      aria-label="Seek"
-                      className="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0"
-                    />
-                  </div>
-                  <span className="w-10 shrink-0 tabular-nums">{formatTime(duration)}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={toggleMute}
-                  className="grid h-8 w-8 place-items-center rounded-full border border-white/15 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer"
-                  aria-label={muted ? "Unmute" : "Mute"}
-                >
-                  {muted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                </button>
-
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  value={muted ? 0 : volume}
-                  onChange={(e) => changeVolume(Number(e.target.value))}
-                  className="h-1.5 w-20 cursor-pointer appearance-none rounded-full bg-white/20 accent-fuchsia-300"
-                  aria-label="Volume"
-                />
-
-                <fieldset
-                  aria-label="Playback speed"
-                  className="inline-flex shrink-0 items-center overflow-hidden rounded-full border border-white/15 bg-white/[0.06] p-0.5"
-                >
-                  {([0.75, 1, 1.25] as const).map((rate) => {
-                    const activeRate = Math.abs(playbackRate - rate) < 0.001;
-                    return (
-                      <button
-                        key={rate}
-                        type="button"
-                        onClick={() => changePlaybackRate(rate)}
-                        className={
-                          "h-7 min-w-[42px] rounded-full px-2 text-[11px] font-semibold cursor-pointer transition-colors " +
-                          (activeRate
-                            ? "bg-cyan-500/30 text-cyan-100"
-                            : "text-slate-200 hover:bg-white/10")
-                        }
-                      >
-                        {rate}x
-                      </button>
-                    );
-                  })}
-                </fieldset>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 rounded-full border-white/20 bg-white/5 text-slate-100 hover:bg-white/10 cursor-pointer"
-                  onClick={closePlayer}
-                  aria-label="Close player"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
               </div>
             </div>
           </div>
-        </div>
+        )
       ) : null}
     </GlobalMediaPlayerContext.Provider>
   );

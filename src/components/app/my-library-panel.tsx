@@ -335,13 +335,18 @@ export function MyLibraryPanel({
     const ids = Array.from(selectedAssetIds).filter((id) => items.some((item) => item.assetId === id));
     if (ids.length === 0) return;
 
-    for (const id of ids) {
-      const a = document.createElement("a");
-      a.href = `/api/assets/${encodeURIComponent(id)}`;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      a.click();
-    }
+    ids.forEach((id, idx) => {
+      window.setTimeout(() => {
+        const frame = document.createElement("iframe");
+        frame.style.display = "none";
+        frame.src = `/api/assets/${encodeURIComponent(id)}?download=1`;
+        document.body.appendChild(frame);
+        window.setTimeout(() => {
+          frame.remove();
+        }, 25000);
+      }, idx * 220);
+    });
+
     toast.success(`Download started for ${ids.length} track(s).`);
   }
 

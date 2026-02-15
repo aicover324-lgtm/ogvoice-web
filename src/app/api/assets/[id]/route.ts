@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { err, ok } from "@/lib/api-response";
-import { deleteObjects, presignGetObject } from "@/lib/storage/s3";
+import { deleteObjects, presignGetObject, sanitizeFileName } from "@/lib/storage/s3";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -18,8 +18,12 @@ export async function GET(req: Request, ctx: Ctx) {
   });
   if (!asset) return err("NOT_FOUND", "File not found", 404);
 
-  const signed = await presignGetObject({ key: asset.storageKey });
   const u = new URL(req.url);
+  const wantsDownload = u.searchParams.get("download") === "1";
+  const signed = await presignGetObject({
+    key: asset.storageKey,
+    downloadFileName: wantsDownload ? sanitizeFileName(asset.fileName || "audio.wav") : undefined,
+  });
   if (u.searchParams.get("json") === "1") {
     return ok({
       assetId: asset.id,
