@@ -19,11 +19,6 @@ type GenJob = {
   progress: number;
   errorMessage?: string | null;
   outputAssetId?: string | null;
-  stemPreview?: {
-    mainVocalsUrl: string | null;
-    backVocalsUrl: string | null;
-    instrumentalUrl: string | null;
-  } | null;
 };
 
 type QueueItem = {
@@ -120,7 +115,6 @@ export function GenerateForm({
   );
   const [outputUrl, setOutputUrl] = React.useState<string | null>(null);
   const [outputFileName, setOutputFileName] = React.useState<string | null>(null);
-  const [stemPreview, setStemPreview] = React.useState<GenJob["stemPreview"]>(null);
   const [latestResultPlaying, setLatestResultPlaying] = React.useState(false);
   const [loadingOutput, setLoadingOutput] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
@@ -224,7 +218,6 @@ export function GenerateForm({
     ]);
     setOutputUrl(null);
     setOutputFileName(null);
-    setStemPreview(null);
     lastOutputAssetIdRef.current = null;
     toast.success("Cover job started.");
   }
@@ -292,7 +285,6 @@ export function GenerateForm({
         }
 
         setJob(next);
-        setStemPreview(next.stemPreview || null);
         setQueue((prev) =>
           prev.map((item) =>
             item.id === id
@@ -1049,32 +1041,6 @@ export function GenerateForm({
             </div>
           </div>
 
-          {job?.status === "succeeded" && stemPreview ? (
-            <div className="mt-4 space-y-3 rounded-xl border border-white/10 bg-[#0b1328] p-4">
-              <div className="text-sm font-semibold">Stem Previews</div>
-
-              <div>
-                <div className="mb-1 text-xs text-slate-300">Main vocals (converted)</div>
-                <CustomAudioPlayer src={stemPreview.mainVocalsUrl || null} preload="none" variant="compact" />
-              </div>
-
-              <div>
-                <div className="mb-1 text-xs text-slate-300">Back vocals</div>
-                {stemPreview.backVocalsUrl ? (
-                  <CustomAudioPlayer src={stemPreview.backVocalsUrl} preload="none" variant="compact" />
-                ) : (
-                  <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs text-muted-foreground">
-                    Back vocals were not included in this generation.
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <div className="mb-1 text-xs text-slate-300">Instrumental</div>
-                <CustomAudioPlayer src={stemPreview.instrumentalUrl || null} preload="none" variant="compact" />
-              </div>
-            </div>
-          ) : null}
         </div>
         ) : null}
 

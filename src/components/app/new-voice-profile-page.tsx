@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DraftDatasetUploaderWithReplace } from "@/components/app/draft-dataset-uploader-with-replace";
+import { DatasetQualityGuide } from "@/components/app/dataset-quality-guide";
 import { ImageUploader } from "@/components/app/image-uploader";
 import { Badge } from "@/components/ui/badge";
 import { PremiumCard } from "@/components/app/premium-card";
@@ -178,6 +179,8 @@ export function NewVoiceProfilePage() {
       <form ref={formRef} onSubmit={createVoice} className="mt-6">
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
           <div className="space-y-4">
+            <DatasetQualityGuide />
+
             <DraftDatasetUploaderWithReplace
               key={`voice-${resetKey}`}
               title="1. Singing Record"
