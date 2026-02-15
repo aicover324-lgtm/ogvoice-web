@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { AppSidebar } from "@/components/app/app-sidebar";
 import { MobileNav } from "@/components/app/mobile-nav";
+import { GlobalMediaPlayerProvider } from "@/components/app/global-media-player-provider";
 import { UserMenu } from "@/components/app/user-menu";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -27,7 +28,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </div>
           </div>
         </header>
-        <div className="min-h-screen overflow-x-hidden pt-16">{children}</div>
+        <div className="min-h-screen overflow-x-hidden pt-16">
+          <GlobalMediaPlayerProvider>{children}</GlobalMediaPlayerProvider>
+        </div>
       </div>
     </div>
   );
